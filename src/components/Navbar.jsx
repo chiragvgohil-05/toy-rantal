@@ -41,7 +41,7 @@ const Navbar = () => {
         <div className="navbar-left">
           <div className="logo">
             <NavLink to="/">
-              <img src={Logo} alt="ShopEasy Logo" />
+              <img src={Logo} alt="ShopEasy" />
             </NavLink>
           </div>
           <div className="hamburger" onClick={toggleMenu}>
