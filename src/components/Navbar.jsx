@@ -37,14 +37,6 @@ const Navbar = () => {
                     >
                         Toys
                     </NavLink>
-                    <NavLink
-                        to="/toys"
-                        className={({ isActive }) =>
-                            `hover:text-pink-600 transition ${isActive ? activeClass : ""}`
-                        }
-                    >
-                        How it works
-                    </NavLink>
                 </div>
 
                 {/* Right Section */}
