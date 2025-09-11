@@ -1,5 +1,6 @@
 // src/components/ProductCard.jsx
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 // Simple global store for managing active cards
 let activeCardId = null;
@@ -41,6 +42,7 @@ const ProductCard = ({
                      }) => {
     const [id] = useState(() => propId || autoId++); // Use provided ID or generate one
     const [isOpen, setIsOpen] = useState(false);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const unsubscribe = subscribe((activeId) => {
@@ -77,6 +79,10 @@ const ProductCard = ({
     const calculatedDiscount = discountPercentage ||
         Math.round(((originalPrice - discountedPrice) / originalPrice) * 100);
 
+    const navigateToDetails = () => {
+        navigate(`/products/${id}`);
+    }
+
     return (
         <div className={`relative max-w-sm bg-white shadow-lg rounded-2xl overflow-hidden border border-gray-200 m-4 ${className}`}>
             {/* Discount Badge */}
@@ -90,15 +96,16 @@ const ProductCard = ({
             <img
                 src={imageUrl}
                 alt={title}
-                className="w-full h-56 object-cover"
+                className="w-full h-56 object-cover cursor-pointer"
                 onError={(e) => {
                     e.target.src = "https://via.placeholder.com/300x200?text=Product+Image";
                 }}
+                onClick={navigateToDetails}
             />
 
             {/* Content */}
             <div className="p-4">
-                <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
+                <h2 className="text-xl font-semibold text-gray-800 cursor-pointer" onClick={navigateToDetails}>{title}</h2>
                 <p className="text-gray-600 text-sm mt-2">
                     {description}
                 </p>

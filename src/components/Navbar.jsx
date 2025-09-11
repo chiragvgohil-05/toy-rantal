@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { NavLink } from "react-router-dom"; // Use NavLink
 import { FaBars, FaTimes, FaShoppingCart, FaUser } from "react-icons/fa";
-import Logo from "../assets/Untitled design.png";
+import Logo from "../assets/logo2.png";
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -11,10 +11,10 @@ const Navbar = () => {
 
     return (
         <nav className="fixed top-0 left-0 w-full z-50 bg-white shadow-md">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-10 flex items-center justify-between h-28">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-10 flex items-center justify-between h-20">
                 {/* Logo */}
                 <div className="flex items-center">
-                    <NavLink to="/" className="text-2xl font-bold text-pink-600 h-44 pt-3">
+                    <NavLink to="/" className="text-2xl font-bold text-pink-600 h-20 pt-3">
                         <img src={Logo} alt="Logo" className="h-full w-auto" />
                     </NavLink>
                 </div>
@@ -42,7 +42,7 @@ const Navbar = () => {
                 {/* Right Section */}
                 <div className="flex items-center space-x-4">
                     <NavLink
-                        to="/account"
+                        to="/profile"
                         className="hidden md:block text-gray-600 hover:text-pink-600"
                     >
                         <FaUser size={20} />
@@ -89,13 +89,13 @@ const Navbar = () => {
                         </NavLink>
 
                         <NavLink
-                            to="/account"
+                            to="/profile"
                             className={({ isActive }) =>
                                 `hover:text-pink-600 ${isActive ? activeClass : ""}`
                             }
                             onClick={() => setIsOpen(false)}
                         >
-                            My Account
+                            My profile
                         </NavLink>
                     </div>
                 </div>

@@ -11,7 +11,7 @@ const Layout = () => {
             <Navbar />
 
             {/* Main content grows to push footer down */}
-            <main className="flex-grow pt-28">
+            <main className="pt-20">
                 <Outlet />
             </main>
 

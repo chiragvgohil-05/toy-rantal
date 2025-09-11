@@ -1,112 +1,129 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 
-const Slider = ({ slides = [] }) => {
-    // Hooks always run
-    const [current, setCurrent] = useState(1);
-    const [isTransitioning, setIsTransitioning] = useState(true);
-    const slideRef = useRef(null);
+const Slider = ({ slides = [], interval = 4000 }) => {
+    const [currentSlide, setCurrentSlide] = useState(0);
+    const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
-    // Clone slides for infinite loop
-    const extendedSlides = slides.length > 0 ? [slides[slides.length - 1], ...slides, slides[0]] : [];
-
-    // Auto slide every 5s
     useEffect(() => {
-        if (!slides.length) return; // skip if no slides
-        const timer = setInterval(() => setCurrent(prev => prev + 1), 5000);
-        return () => clearInterval(timer);
-    }, [slides]);
+        if (!isAutoPlaying || slides.length === 0) return;
 
-    const prevSlide = () => {
-        if (!slides.length) return;
-        setIsTransitioning(true);
-        setCurrent(prev => prev - 1);
-    };
+        const timer = setInterval(() => {
+            setCurrentSlide((prev) => (prev + 1) % slides.length);
+        }, interval);
+
+        return () => clearInterval(timer);
+    }, [isAutoPlaying, slides.length, interval]);
 
     const nextSlide = () => {
-        if (!slides.length) return;
-        setIsTransitioning(true);
-        setCurrent(prev => prev + 1);
+        setCurrentSlide((prev) => (prev + 1) % slides.length);
     };
 
-    // Reset when reaching clones
-    useEffect(() => {
-        if (!slides.length) return;
-        const handleTransitionEnd = () => {
-            if (current === 0) {
-                setIsTransitioning(false);
-                setCurrent(slides.length);
-            }
-            if (current === slides.length + 1) {
-                setIsTransitioning(false);
-                setCurrent(1);
-            }
-        };
+    const prevSlide = () => {
+        setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+    };
 
-        const slider = slideRef.current;
-        slider.addEventListener("transitionend", handleTransitionEnd);
-        return () => slider.removeEventListener("transitionend", handleTransitionEnd);
-    }, [current, slides]);
+    const goToSlide = (index) => {
+        setCurrentSlide(index);
+    };
 
-    // Render nothing visually if slides empty
-    if (!slides.length) return <div className="w-full h-64 bg-gray-200 flex items-center justify-center">No slides available</div>;
+    const handleMouseEnter = () => setIsAutoPlaying(false);
+    const handleMouseLeave = () => setIsAutoPlaying(true);
+
+    if (slides.length === 0) {
+        return <div className="w-full h-screen flex items-center justify-center bg-black text-white">No slides available.</div>;
+    }
 
     return (
-        <div className="relative w-full h-[calc(100vh-7rem)] overflow-hidden">
-            {/* Slides */}
-            <div
-                ref={slideRef}
-                className={`flex h-full ${isTransitioning ? "transition-transform duration-700 ease-in-out" : ""}`}
-                style={{ transform: `translateX(-${current * 100}%)` }}
-            >
-                {extendedSlides.map((slide, idx) => (
-                    <div key={idx} className="w-full flex-shrink-0 h-full relative">
-                        <img
-                            src={slide.img}
-                            alt={slide.title}
-                            className="w-full h-full object-cover"
-                        />
-                        {slide.title || slide.desc || slide.link ? (
-                            <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-center text-white px-6">
-                                {slide.title && <h2 className="text-4xl md:text-6xl font-bold">{slide.title}</h2>}
-                                {slide.desc && <p className="mt-4 text-lg md:text-2xl max-w-2xl">{slide.desc}</p>}
-                                {slide.link && (
+        <div
+            className="relative w-full h-screen overflow-hidden bg-black"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+        >
+            <div className="relative w-full h-full">
+                {slides.map((slide, index) => (
+                    <div
+                        key={slide.id || index}
+                        className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${
+                            index === currentSlide ? "opacity-100 z-20" : "opacity-0 z-10"
+                        }`}
+                        style={{ backgroundImage: `url(${slide.image})` }}
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-tr from-black/60 via-black/30 to-black/70 flex items-center justify-center z-30">
+                            <div className="text-center text-white max-w-3xl px-5 animate-fadeInUp">
+                                <h1 className="text-4xl md:text-6xl font-bold leading-tight drop-shadow-lg mb-4">
+                                    {slide.title}
+                                </h1>
+                                <p className="text-lg md:text-2xl font-light opacity-90 drop-shadow-md mb-6">
+                                    {slide.subtitle}
+                                </p>
+                                {slide.buttonText && (
                                     <a
-                                        href={slide.link}
-                                        className="mt-6 px-8 py-3 bg-pink-600 hover:bg-pink-700 rounded-full font-semibold transition"
+                                        href={slide.buttonLink}
+                                        className="inline-block px-8 py-4 bg-gradient-to-r from-pink-500 to-orange-500 text-white font-semibold rounded-full uppercase tracking-wider shadow-lg border-2 border-transparent transition-all duration-300 hover:scale-105 hover:shadow-xl hover:from-orange-500 hover:to-pink-500 hover:border-white/30"
                                     >
-                                        Shop Now
+                                        {slide.buttonText}
                                     </a>
                                 )}
                             </div>
-                        ) : null}
+                        </div>
                     </div>
                 ))}
             </div>
 
-            {/* Controls */}
-            <button
-                onClick={prevSlide}
-                className="absolute top-1/2 left-4 -translate-y-1/2 z-20 bg-black/40 text-white p-3 rounded-full hover:bg-black/70"
-            >
-                ❮
-            </button>
-            <button
-                onClick={nextSlide}
-                className="absolute top-1/2 right-4 -translate-y-1/2 z-20 bg-black/40 text-white p-3 rounded-full hover:bg-black/70"
-            >
-                ❯
-            </button>
-
-            {/* Dots */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex space-x-3 z-20">
-                {slides.map((_, index) => (
+            {/* Navigation Arrows */}
+            {slides.length > 1 && (
+                <>
                     <button
-                        key={index}
-                        onClick={() => setCurrent(index + 1)}
-                        className={`w-4 h-4 rounded-full ${current === index + 1 ? "bg-pink-600" : "bg-white/70"}`}
-                    />
-                ))}
-            </div>
+                        className="absolute top-1/2 left-6 -translate-y-1/2 bg-white/20 hover:bg-white/30 w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center text-white transition-all duration-300 backdrop-blur-md border border-white/30 shadow-lg hover:scale-110 z-40"
+                        onClick={prevSlide}
+                    >
+                        <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M15 18L9 12L15 6" />
+                        </svg>
+                    </button>
+
+                    <button
+                        className="absolute top-1/2 right-6 -translate-y-1/2 bg-white/20 hover:bg-white/30 w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center text-white transition-all duration-300 backdrop-blur-md border border-white/30 shadow-lg hover:scale-110 z-40"
+                        onClick={nextSlide}
+                    >
+                        <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M9 18L15 12L9 6" />
+                        </svg>
+                    </button>
+
+                    {/* Dots */}
+                    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3 z-40">
+                        {slides.map((_, index) => (
+                            <button
+                                key={index}
+                                onClick={() => goToSlide(index)}
+                                className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${
+                                    index === currentSlide
+                                        ? "bg-white scale-125 shadow-[0_0_0_3px_rgba(255,255,255,0.3)]"
+                                        : "border-white/60 bg-transparent hover:bg-white/80 hover:scale-110"
+                                }`}
+                            />
+                        ))}
+                    </div>
+
+                    {/* Play/Pause Button */}
+                    <button
+                        className="absolute top-6 right-6 w-12 h-12 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white border border-white/30 transition-all duration-300 hover:scale-110 backdrop-blur-md z-40"
+                        onClick={() => setIsAutoPlaying(!isAutoPlaying)}
+                    >
+                        {isAutoPlaying ? (
+                            <svg width="20" height="20" fill="currentColor">
+                                <rect x="6" y="4" width="4" height="16" />
+                                <rect x="14" y="4" width="4" height="16" />
+                            </svg>
+                        ) : (
+                            <svg width="20" height="20" fill="currentColor">
+                                <polygon points="5,3 19,12 5,21" />
+                            </svg>
+                        )}
+                    </button>
+                </>
+            )}
         </div>
     );
 };

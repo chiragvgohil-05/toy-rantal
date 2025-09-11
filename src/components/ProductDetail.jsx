@@ -1,199 +1,136 @@
-// src/pages/Home.js
+// src/pages/ProductDetail.jsx
 import React, { useState } from "react";
-import Slider from "../components/Slider";
-import ProductCard from "../components/ProductCard";
-import '../style/Home.css';
-import Collections from "../components/Collections";
 
-const Home = () => {
-    const slides = [
-        {
-            id: 1,
-            image: "https://picsum.photos/id/1015/1920/1080",
-            title: "Welcome to Our Store",
-            subtitle: "Discover amazing products with unbeatable prices",
-            buttonText: "Shop Now",
-            buttonLink: "/shop",
-        },
-        {
-            id: 2,
-            image: "https://picsum.photos/id/1018/1920/1080",
-            title: "Fresh Arrivals",
-            subtitle: "Check out the latest additions to our collection",
-            buttonText: "Explore",
-            buttonLink: "/new",
-        },
-        {
-            id: 3,
-            image: "https://picsum.photos/id/1025/1920/1080",
-            title: "Exclusive Deals",
-            subtitle: "Save big with our special offers",
-            buttonText: "View Deals",
-            buttonLink: "/deals",
-        },
-    ];
-    // Create an array of products
-    const products = [
-        {
-            id: 1,
-            title: "Premium Building Blocks",
-            description: "Educational building blocks for creative play and learning.",
-            imageUrl: "https://img.freepik.com/free-photo/colorful-plastic-building-blocks_53876-87619.jpg",
-            originalPrice: 1800,
-            discountedPrice: 1400,
-            discountPercentage: 22,
-            rentalOptions: [
-                { days: 7, price: 400 },
-                { days: 15, price: 750 },
-                { days: 30, price: 1300 },
-            ]
-        },
-        {
-            id: 2,
-            title: "Remote Control Car",
-            description: "High-speed RC car with realistic features and long battery life.",
-            imageUrl: "https://img.freepik.com/free-photo/toy-car-isolated-white-background_130265-7234.jpg",
-            originalPrice: 2500,
-            discountedPrice: 2000,
-            discountPercentage: 20,
-            rentalOptions: [
-                { days: 7, price: 600 },
-                { days: 15, price: 1100 },
-                { days: 30, price: 1900 },
-            ]
-        },
-        {
-            id: 3,
-            title: "Educational Science Kit",
-            description: "Complete science experiment kit for young explorers.",
-            imageUrl: "https://img.freepik.com/free-photo/science-tools-blue-background_23-2147850639.jpg",
-            originalPrice: 2200,
-            discountedPrice: 1800,
-            discountPercentage: 18,
-            rentalOptions: [
-                { days: 7, price: 550 },
-                { days: 15, price: 950 },
-                { days: 30, price: 1700 },
-            ]
-        }
-    ];
+const ProductDetail = ({
+                           id = 1,
+                           title = "Premium Toy",
+                           description = "A fun and educational toy that keeps kids entertained.",
+                           imageUrl = "https://img.freepik.com/free-photo/kids-toys_144627-38648.jpg",
+                           originalPrice = 1500,
+                           discountedPrice = 1200,
+                           discountPercentage = 20,
+                           rentalOptions = [
+                               { days: 7, price: 500 },
+                               { days: 15, price: 900 },
+                               { days: 30, price: 1500 },
+                           ],
+                           onOptionSelect,
+                           className = "",
+                           showDiscountBadge = true,
+                           buttonText = "Add to Cart",
+                           overlayTitle = "Choose Rental Option",
+                           closeButtonText = "Close",
+                       }) => {
+    const [selectedOption, setSelectedOption] = useState(null);
+    const [showOptions, setShowOptions] = useState(false);
 
-    // Handle rental option selection
-    const handleOptionSelect = (selectionInfo) => {
-        console.log("Selected option:", selectionInfo);
-        // You can add this to a cart or state management here
+    const handleSelect = (option) => {
+        setSelectedOption(option);
+        if (onOptionSelect) onOptionSelect(option);
+        setShowOptions(false);
     };
 
     return (
-        <div className="home-page">
-            <Slider slides={slides} interval={4000}/>
-            <div>
-                <Collections/>
-            </div>
-            <div className="relative bg-gradient-to-b from-blue-50 to-white py-16 overflow-hidden">
-
-                <h2 className="text-4xl md:text-5xl font-extrabold text-center text-pink-600 mb-12 drop-shadow-lg">
-                    Toy Gallery
-                </h2>
-
-                <div className="container mx-auto px-6 flex flex-wrap justify-center gap-8">
-                    {products.map((product) => (
-                        <div
-                            key={product.id}
-                            className="transform hover:scale-105 transition-transform duration-300"
-                        >
-                            <ProductCard
-                                id={product.id}
-                                title={product.title}
-                                description={product.description}
-                                imageUrl={product.imageUrl}
-                                originalPrice={product.originalPrice}
-                                discountedPrice={product.discountedPrice}
-                                discountPercentage={product.discountPercentage}
-                                rentalOptions={product.rentalOptions}
-                                onOptionSelect={handleOptionSelect}
-                                className="shadow-xl rounded-2xl bg-white border-4 border-pink-200 hover:border-yellow-300"
+        <>
+            <div
+                className={`bg-gradient-to-r from-yellow-50 via-pink-50 to-purple-50 py-10 px-4 ${className}`}
+            >
+                <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
+                    <div className="grid grid-cols-1 lg:grid-cols-2">
+                        {/* Product Image */}
+                        <div className="relative">
+                            <img
+                                src={imageUrl}
+                                alt={title}
+                                className="w-full h-96 object-cover"
                             />
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            <div>
-            </div>
-
-            <section className="relative bg-gradient-to-t from-blue-50 to-white py-24 overflow-hidden">
-                <div className="absolute top-10 left-10 w-16 h-16 bg-pink-400 rounded-full animate-bounce"></div>
-                <div className="absolute bottom-20 right-20 w-20 h-20 bg-blue-400 rounded-full animate-ping"></div>
-
-                <div className="relative max-w-6xl mx-auto px-6 text-center">
-                    <h2 className="text-5xl md:text-6xl font-extrabold text-pink-600 drop-shadow-md mb-6">Benefits of
-                        Toy Renting</h2>
-                    <p className="text-gray-700 text-lg mb-14 max-w-2xl mx-auto">Fun, affordable, and eco-friendly
-                        playtime for your little ones!</p>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12">
-                        <div
-                            className="bg-white rounded-3xl p-8 shadow-2xl transform hover:scale-105 hover:rotate-1 transition">
-                            <div
-                                className="w-24 h-24 mx-auto flex items-center justify-center bg-gradient-to-r from-pink-400 to-pink-600 rounded-full text-5xl mb-6">🧸
-                            </div>
-                            <h3 className="text-2xl font-bold text-pink-600">Endless Toys</h3>
-                            <p className="text-gray-600 mt-3">Discover new toys every month and keep playtime
-                                exciting!</p>
+                            {showDiscountBadge && (
+                                <span className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-lg text-sm font-bold shadow-md">
+                {discountPercentage}% OFF
+              </span>
+                            )}
                         </div>
 
-                        <div
-                            className="bg-white rounded-3xl p-8 shadow-2xl transform hover:scale-105 hover:-rotate-1 transition">
-                            <div
-                                className="w-24 h-24 mx-auto flex items-center justify-center bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full text-5xl mb-6">💸
-                            </div>
-                            <h3 className="text-2xl font-bold text-yellow-600">Save Money</h3>
-                            <p className="text-gray-600 mt-3">Get premium toys without buying them — save for more
-                                fun!</p>
-                        </div>
+                        {/* Product Info */}
+                        <div className="p-6 flex flex-col justify-between">
+                            <div>
+                                <h1 className="text-3xl font-extrabold text-purple-700 mb-2">
+                                    {title}
+                                </h1>
+                                <p className="text-gray-600 mb-4">{description}</p>
 
-                        <div
-                            className="bg-white rounded-3xl p-8 shadow-2xl transform hover:scale-105 hover:rotate-2 transition">
-                            <div
-                                className="w-24 h-24 mx-auto flex items-center justify-center bg-gradient-to-r from-green-400 to-green-600 rounded-full text-5xl mb-6">🌍
-                            </div>
-                            <h3 className="text-2xl font-bold text-green-600">Eco Friendly</h3>
-                            <p className="text-gray-600 mt-3">Help the planet by reusing and recycling toys
-                                sustainably.</p>
-                        </div>
+                                {/* Price Section */}
+                                <div className="flex items-center space-x-3 mb-4">
+                <span className="text-2xl font-bold text-pink-600">
+                  ₹{discountedPrice}
+                </span>
+                                    <span className="text-gray-400 line-through">
+                  ₹{originalPrice}
+                </span>
+                                </div>
 
-                        <div
-                            className="bg-white rounded-3xl p-8 shadow-2xl transform hover:scale-105 hover:-rotate-2 transition">
-                            <div
-                                className="w-24 h-24 mx-auto flex items-center justify-center bg-gradient-to-r from-blue-400 to-blue-600 rounded-full text-5xl mb-6">📚
+                                {/* Rental Options */}
+                                <div className="space-y-2">
+                                    <h2 className="text-lg font-semibold text-purple-600 mb-1">
+                                        Rental Options
+                                    </h2>
+                                    <div className="flex flex-wrap gap-3">
+                                        {rentalOptions.map((option, idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={() => handleSelect(option)}
+                                                className={`px-4 py-2 rounded-lg border font-medium ${
+                                                    selectedOption?.days === option.days
+                                                        ? "bg-purple-500 text-white border-purple-600"
+                                                        : "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
+                                                }`}
+                                            >
+                                                {option.days} days - ₹{option.price}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
-                            <h3 className="text-2xl font-bold text-blue-600">Learn & Play</h3>
-                            <p className="text-gray-600 mt-3">Choose from fun educational toys that boost
-                                creativity.</p>
-                        </div>
 
-                        <div
-                            className="bg-white rounded-3xl p-8 shadow-2xl transform hover:scale-105 hover:rotate-1 transition">
-                            <div
-                                className="w-24 h-24 mx-auto flex items-center justify-center bg-gradient-to-r from-purple-400 to-purple-600 rounded-full text-5xl mb-6">🏡
-                            </div>
-                            <h3 className="text-2xl font-bold text-purple-600">Clutter Free</h3>
-                            <p className="text-gray-600 mt-3">Keep your home tidy with fewer unused toys lying
-                                around.</p>
-                        </div>
-
-                        <div
-                            className="bg-white rounded-3xl p-8 shadow-2xl transform hover:scale-105 hover:-rotate-1 transition">
-                            <div
-                                className="w-24 h-24 mx-auto flex items-center justify-center bg-gradient-to-r from-red-400 to-red-600 rounded-full text-5xl mb-6">😊
-                            </div>
-                            <h3 className="text-2xl font-bold text-red-600">Happy Kids</h3>
-                            <p className="text-gray-600 mt-3">Fresh toys = happy kids with smiles all day long!</p>
+                            {/* Action Button */}
+                            <button
+                                onClick={() => setShowOptions(true)}
+                                className="mt-6 w-full py-3 bg-gradient-to-r from-purple-400 to-pink-400 text-white font-bold rounded-xl shadow-md hover:from-purple-500 hover:to-pink-500 transition-all"
+                            >
+                                {buttonText}
+                            </button>
                         </div>
                     </div>
                 </div>
-            </section>
+
+                {/* Rental Option Modal */}
+                {showOptions && (
+                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+                        <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md">
+                            <h2 className="text-xl font-bold text-purple-700 mb-4">
+                                {overlayTitle}
+                            </h2>
+                            <div className="space-y-3">
+                                {rentalOptions.map((option, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => handleSelect(option)}
+                                        className="w-full py-2 px-4 border rounded-lg hover:bg-gray-100"
+                                    >
+                                        {option.days} days – ₹{option.price}
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                onClick={() => setShowOptions(false)}
+                                className="mt-4 w-full py-2 bg-gray-200 rounded-lg hover:bg-gray-300 font-medium"
+                            >
+                                {closeButtonText}
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
 
             <section className="how-it-works py-16 bg-gradient-to-b from-blue-50 to-white">
                 <div className="max-w-6xl mx-auto px-6 text-center">
@@ -309,8 +246,8 @@ const Home = () => {
                     </div>
                 </div>
             </section>
-        </div>
+        </>
     );
 };
 
-export default Home;
+export default ProductDetail;
