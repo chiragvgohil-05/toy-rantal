@@ -20,6 +20,12 @@ import ProductCreateForm from "./pages/admin/Products/ProductCreateForm";
 import ProductEditForm from "./pages/admin/Products/ProductEditForm";
 import AdminProfile from "./pages/admin/AdminProfile";
 import ProductDetail from "./components/ProductDetail";
+import Checkout from "./pages/Checkout";
+import AboutUs from "./pages/AboutUs";
+import ContactUs from "./pages/ContactUs";
+import Shipping from "./pages/Shipping";
+import Returns from "./pages/Returns";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 // Fake auth for demo
 const isAdmin = true;  // change to false to simulate user login
@@ -41,6 +47,12 @@ function App() {
                     <Route path="cart" element={<Cart />} />
                     <Route path="products/:id" element={<ProductDetail />} />
                     <Route path="profile" element={<Profile />} />
+                    <Route path="checkout" element={<Checkout />} />
+                    <Route path="about" element={<AboutUs />} />
+                    <Route path="contact" element={<ContactUs />} />
+                    <Route path="shipping" element={<Shipping />} />
+                    <Route path="returns" element={<Returns />} />
+                    <Route path="privacy-policy" element={<PrivacyPolicy />} />
                 </Route>
 
                 {/* Admin Routes */}

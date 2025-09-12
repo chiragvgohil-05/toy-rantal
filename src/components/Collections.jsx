@@ -39,7 +39,7 @@ const Collections = () => {
                             className={`rounded-2xl shadow-lg p-6 bg-gradient-to-br ${col.color} hover:scale-105 transition-transform duration-300`}
                         >
                             <div className="flex justify-center mb-4">
-                                <img src={col.img} alt={col.title} className="w-20 h-20 animate-bounce" />
+                                <img src={col.img} alt={col.title} className="w-20 h-20" />
                             </div>
                             <h3 className="text-xl font-bold text-gray-800">{col.title}</h3>
                             <button className="mt-4 px-4 py-2 bg-white rounded-full shadow hover:bg-pink-100 transition">

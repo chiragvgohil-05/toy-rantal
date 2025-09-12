@@ -1,5 +1,6 @@
 // src/pages/Cart.jsx
 import React, { useState } from "react";
+import {useNavigate} from "react-router-dom";
 
 const initialCart = [
     {
@@ -22,6 +23,11 @@ const initialCart = [
 
 const Cart = () => {
     const [cartItems, setCartItems] = useState(initialCart);
+    const [promoCode, setPromoCode] = useState("");
+    const [discount, setDiscount] = useState(0);
+    const [showPromoMessage, setShowPromoMessage] = useState(false);
+    const [promoMessage, setPromoMessage] = useState("");
+    const navigate = useNavigate();
 
     const incrementQty = (id) => {
         setCartItems((prev) =>
@@ -45,15 +51,46 @@ const Cart = () => {
         setCartItems((prev) => prev.filter((item) => item.id !== id));
     };
 
-    const totalAmount = cartItems.reduce(
+    const applyPromoCode = () => {
+        if (promoCode.toUpperCase() === "TOY20") {
+            setDiscount(0.2); // 20% discount
+            setPromoMessage("Promo code applied! 20% discount added.");
+            setShowPromoMessage(true);
+        } else if (promoCode.toUpperCase() === "TOY10") {
+            setDiscount(0.1); // 10% discount
+            setPromoMessage("Promo code applied! 10% discount added.");
+            setShowPromoMessage(true);
+        } else {
+            setDiscount(0);
+            setPromoMessage("Invalid promo code. Please try again.");
+            setShowPromoMessage(true);
+        }
+
+        // Hide message after 3 seconds
+        setTimeout(() => {
+            setShowPromoMessage(false);
+        }, 3000);
+    };
+
+    const subtotal = cartItems.reduce(
         (acc, item) => acc + item.price * item.quantity,
         0
     );
 
+    const discountAmount = subtotal * discount;
+    const totalAmount = subtotal - discountAmount;
+    const totalItems = cartItems.reduce((acc, item) => acc + item.quantity, 0);
+
+    const handleRedirectToys = () => {
+        navigate("/toys");
+    }
+
     return (
-        <div className="bg-gradient-to-r from-yellow-50 via-pink-50 to-purple-50 py-10">
+        <div className="bg-gradient-to-r from-yellow-50 via-pink-50 to-purple-50 min-h-screen py-10">
             <div className="container mx-auto px-4">
-                <h1 className="text-3xl font-extrabold text-purple-700 mb-6">Your Cart</h1>
+                <h1 className="text-3xl font-extrabold text-purple-700 mb-6 text-center md:text-left">
+                    Your Cart
+                </h1>
 
                 {cartItems.length === 0 ? (
                     <div className="text-center py-20">
@@ -61,28 +98,42 @@ const Cart = () => {
                         <h2 className="text-2xl font-bold text-purple-700 mb-2">
                             Your cart is empty
                         </h2>
-                        <p className="text-gray-600">
+                        <p className="text-gray-600 mb-6">
                             Add some toys to rent and come back here!
                         </p>
+                        <button onClick={handleRedirectToys} className="px-6 py-3 bg-gradient-to-r from-purple-400 to-pink-400 text-white font-bold rounded-xl shadow-md hover:from-purple-500 hover:to-pink-500 transition-all">
+                            Continue Shopping
+                        </button>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Cart Items */}
-                        <div className="lg:col-span-2 space-y-4">
+                        <div className="lg:col-span-2 space-y-6">
                             {cartItems.map((item) => (
                                 <div
                                     key={item.id}
-                                    className="flex items-center bg-white rounded-2xl shadow-md p-4 border border-pink-200"
+                                    className="flex flex-col sm:flex-row items-center bg-white rounded-2xl shadow-md p-4 border border-pink-200 transition-all hover:shadow-lg"
                                 >
                                     <img
                                         src={item.imageUrl}
                                         alt={item.title}
-                                        className="w-24 h-24 rounded-xl object-cover"
+                                        className="w-full sm:w-24 h-24 rounded-xl object-cover mb-4 sm:mb-0"
                                     />
-                                    <div className="ml-4 flex-1">
-                                        <h3 className="text-lg font-bold text-purple-700">
-                                            {item.title}
-                                        </h3>
+                                    <div className="sm:ml-4 flex-1 w-full">
+                                        <div className="flex justify-between items-start">
+                                            <h3 className="text-lg font-bold text-purple-700">
+                                                {item.title}
+                                            </h3>
+                                            <button
+                                                onClick={() => removeItem(item.id)}
+                                                className="text-red-500 hover:text-red-700 transition-colors"
+                                                aria-label={`Remove ${item.title}`}
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                </svg>
+                                            </button>
+                                        </div>
                                         <p className="text-gray-600">
                                             Rental: {item.rentalDays} days
                                         </p>
@@ -91,29 +142,30 @@ const Cart = () => {
                                         </p>
 
                                         {/* Quantity Controls */}
-                                        <div className="flex items-center mt-2">
-                                            <button
-                                                onClick={() => decrementQty(item.id)}
-                                                className="px-3 py-1 bg-gray-200 rounded-l-lg hover:bg-gray-300 transition"
-                                            >
-                                                -
-                                            </button>
-                                            <span className="px-4 py-1 bg-gray-100 border-t border-b text-gray-800">
-                                                {item.quantity}
-                                            </span>
-                                            <button
-                                                onClick={() => incrementQty(item.id)}
-                                                className="px-3 py-1 bg-gray-200 rounded-r-lg hover:bg-gray-300 transition"
-                                            >
-                                                +
-                                            </button>
+                                        <div className="flex items-center mt-4 justify-between">
+                                            <div className="flex items-center">
+                                                <button
+                                                    onClick={() => decrementQty(item.id)}
+                                                    className="px-3 py-1 bg-gray-200 rounded-l-lg hover:bg-gray-300 transition"
+                                                    aria-label="Decrease quantity"
+                                                >
+                                                    -
+                                                </button>
+                                                <span className="px-4 py-1 bg-gray-100 border-t border-b text-gray-800 min-w-[3rem] text-center">
+                          {item.quantity}
+                        </span>
+                                                <button
+                                                    onClick={() => incrementQty(item.id)}
+                                                    className="px-3 py-1 bg-gray-200 rounded-r-lg hover:bg-gray-300 transition"
+                                                    aria-label="Increase quantity"
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
 
-                                            <button
-                                                onClick={() => removeItem(item.id)}
-                                                className="ml-4 text-red-500 hover:text-red-700 font-bold"
-                                            >
-                                                Remove
-                                            </button>
+                                            <div className="text-lg font-bold text-purple-700">
+                                                ₹{item.price * item.quantity}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -121,28 +173,39 @@ const Cart = () => {
                         </div>
 
                         {/* Cart Summary */}
-                        <div className="bg-white rounded-2xl shadow-md p-6 border border-pink-200 h-fit">
+                        <div className="bg-white rounded-2xl shadow-md p-6 border border-pink-200 h-fit sticky top-6">
                             <h2 className="text-xl font-bold text-purple-700 mb-4">
                                 Order Summary
                             </h2>
-                            <div className="flex justify-between mb-2">
-                                <span>Items:</span>
-                                <span>{cartItems.length}</span>
-                            </div>
-                            <div className="flex justify-between mb-2">
-                                <span>Total Quantity:</span>
-                                <span>
-                                    {cartItems.reduce((acc, item) => acc + item.quantity, 0)}
-                                </span>
-                            </div>
-                            <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2 border-gray-200">
-                                <span>Total Amount:</span>
-                                <span>₹{totalAmount}</span>
+
+                            <div className="space-y-3 mb-4">
+                                <div className="flex justify-between">
+                                    <span>Items ({cartItems.length}):</span>
+                                    <span>₹{subtotal}</span>
+                                </div>
+
+                                {discount > 0 && (
+                                    <div className="flex justify-between text-green-600">
+                                        <span>Discount ({discount * 100}%):</span>
+                                        <span>-₹{discountAmount.toFixed(2)}</span>
+                                    </div>
+                                )}
+
+                                <div className="flex justify-between font-bold text-lg border-t pt-3 mt-1 border-gray-200">
+                                    <span>Total Amount:</span>
+                                    <span>₹{totalAmount.toFixed(2)}</span>
+                                </div>
                             </div>
 
-                            <button className="mt-6 w-full py-3 bg-gradient-to-r from-purple-400 to-pink-400 text-white font-bold rounded-xl shadow-md hover:from-purple-500 hover:to-pink-500 transition-all">
+                            <button onClick={()=>navigate("/checkout")} className="w-full py-3 bg-gradient-to-r from-purple-400 to-pink-400 text-white font-bold rounded-xl shadow-md hover:from-purple-500 hover:to-pink-500 transition-all transform hover:-translate-y-0.5">
                                 Proceed to Checkout
                             </button>
+
+                            <div className="text-center mt-4">
+                                <button className="text-purple-600 hover:text-purple-800 text-sm font-medium" onClick={handleRedirectToys}>
+                                    Continue Shopping
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

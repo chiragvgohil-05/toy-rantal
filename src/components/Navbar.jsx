@@ -37,6 +37,23 @@ const Navbar = () => {
                     >
                         Toys
                     </NavLink>
+                    <NavLink
+                        to="/about"
+                        className={({ isActive }) =>
+                            `hover:text-pink-600 transition ${isActive ? activeClass : ""}`
+                        }
+                    >
+                        About Us
+                    </NavLink>
+                    <NavLink
+                        to="/contact"
+                        className={({ isActive }) =>
+                            `hover:text-pink-600 transition ${isActive ? activeClass : ""}`
+                        }
+                    >
+                        Contact Us
+                    </NavLink>
+
                 </div>
 
                 {/* Right Section */}
@@ -86,6 +103,24 @@ const Navbar = () => {
                             onClick={() => setIsOpen(false)}
                         >
                             Toys
+                        </NavLink>
+                       <NavLink
+                            to="/about"
+                            className={({ isActive }) =>
+                                `hover:text-pink-600 ${isActive ? activeClass : ""}`
+                            }
+                            onClick={() => setIsOpen(false)}
+                        >
+                           About Us
+                        </NavLink>
+                        <NavLink
+                            to="/contact"
+                            className={({ isActive }) =>
+                                `hover:text-pink-600 ${isActive ? activeClass : ""}`
+                            }
+                            onClick={() => setIsOpen(false)}
+                        >
+                            Contact Us
                         </NavLink>
 
                         <NavLink

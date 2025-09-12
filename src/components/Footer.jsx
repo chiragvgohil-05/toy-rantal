@@ -47,11 +47,6 @@ const Footer = () => {
                     <h2 className="font-bold mb-4 text-pink-400 text-lg">Help & Support</h2>
                     <ul className="space-y-2">
                         <li>
-                            <Link to="/faq" className="hover:text-pink-600 transition-all transform hover:scale-105">
-                                FAQ
-                            </Link>
-                        </li>
-                        <li>
                             <Link to="/shipping" className="hover:text-pink-600 transition-all transform hover:scale-105">
                                 Shipping
                             </Link>
@@ -62,7 +57,7 @@ const Footer = () => {
                             </Link>
                         </li>
                         <li>
-                            <Link to="/privacy" className="hover:text-pink-600 transition-all transform hover:scale-105">
+                            <Link to="/privacy-policy" className="hover:text-pink-600 transition-all transform hover:scale-105">
                                 Privacy Policy
                             </Link>
                         </li>
