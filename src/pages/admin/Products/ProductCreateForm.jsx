@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import ImageUpload from "../../../components/ImageUpload";
-
+import apiClient from "../../../apiClient";
 const ProductCreateForm = () => {
+    // Map categories to IDs
+    const categoryMap = {
+        "Soft Toys": 1,
+        "Vehicles": 2,
+        "Dolls": 3,
+        "Blocks": 4,
+        "Puzzles": 5,
+        "Electronic Toys": 6
+    };
+
     const [productData, setProductData] = useState({
         title: "",
         category: "",
@@ -20,6 +30,7 @@ const ProductCreateForm = () => {
     const [errors, setErrors] = useState({});
     const [touched, setTouched] = useState({});
 
+    // Calculate discounted price
     useEffect(() => {
         const original = parseFloat(productData.originalPrice);
         const discountPercent = parseFloat(productData.discountPercentage);
@@ -90,11 +101,12 @@ const ProductCreateForm = () => {
         setTouched(prev => ({ ...prev, [`rental-${index}-price`]: true }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
+        // Validate all fields
         const newErrors = {};
-        Object.keys(productData).forEach(key => {
+        Object.keys(productData).forEach((key) => {
             if (key !== "rentalOptions") {
                 const error = validateField(key, productData[key]);
                 if (error) newErrors[key] = error;
@@ -107,16 +119,69 @@ const ProductCreateForm = () => {
             }
         });
 
-        if (images.length === 0) {
-            newErrors.images = "At least one image is required";
-        }
+        if (images.length === 0) newErrors.images = "At least one image is required";
 
         setErrors(newErrors);
         setTouched(Object.keys(productData).reduce((acc, key) => ({ ...acc, [key]: true }), {}));
 
-        if (Object.keys(newErrors).length === 0) {
-            console.log("Product Created:", { ...productData, images });
-            alert("Product created successfully!");
+        if (Object.keys(newErrors).length > 0) return; // Stop if errors
+
+        try {
+            const formData = new FormData();
+            formData.append("title", productData.title);
+            formData.append("slug", productData.title.toLowerCase().replace(/\s+/g, "-"));
+            formData.append("category_id", categoryMap[productData.category] || 0);
+            formData.append("description", productData.description);
+            formData.append("actual_price", productData.originalPrice);
+            formData.append("discount_price", productData.discountedPrice);
+            formData.append("active", 1);
+
+            // Rental options
+            productData.rentalOptions.forEach((opt, i) => {
+                formData.append(`rentalOptions[${i}][days]`, opt.days);
+                formData.append(`rentalOptions[${i}][price]`, opt.price);
+            });
+
+            // Images
+            // images.forEach((img) => {
+            //     formData.append("images[]", img.file); // important: use images[]
+            // });
+
+            // POST request using apiClient
+            const response = await apiClient.post("/admin/products", formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data", // Must be multipart/form-data
+                },
+            });
+
+            console.log(response, "chirag")
+
+            if (response.data.success) {
+                alert("Product created successfully!");
+
+                // Reset form
+                setProductData({
+                    title: "",
+                    category: "",
+                    description: "",
+                    originalPrice: "",
+                    discountedPrice: "",
+                    discountPercentage: "",
+                    rentalOptions: [
+                        { days: 7, price: "" },
+                        { days: 15, price: "" },
+                        { days: 30, price: "" },
+                    ],
+                });
+                setImages([]);
+                setErrors({});
+                setTouched({});
+            } else {
+                alert(response.data.message || "Failed to create product");
+            }
+        } catch (err) {
+            console.error(err);
+            alert(err.message || JSON.stringify(err));
         }
     };
 
@@ -147,9 +212,7 @@ const ProductCreateForm = () => {
                                     value={productData.title}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
-                                    className={`w-full p-3 border rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${
-                                        hasError('title') ? 'border-red-400' : 'border-gray-300'
-                                    }`}
+                                    className={`w-full p-3 border rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${hasError('title') ? 'border-red-400' : 'border-gray-300'}`}
                                     placeholder="e.g., Premium Building Blocks"
                                 />
                                 {hasError('title') && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
@@ -163,17 +226,12 @@ const ProductCreateForm = () => {
                                     value={productData.category}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
-                                    className={`w-full p-3 border rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${
-                                        hasError('category') ? 'border-red-400' : 'border-gray-300'
-                                    }`}
+                                    className={`w-full p-3 border rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${hasError('category') ? 'border-red-400' : 'border-gray-300'}`}
                                 >
                                     <option value="">Select a category</option>
-                                    <option value="Soft Toys">Soft Toys</option>
-                                    <option value="Vehicles">Vehicles</option>
-                                    <option value="Dolls">Dolls</option>
-                                    <option value="Blocks">Blocks</option>
-                                    <option value="Puzzles">Puzzles</option>
-                                    <option value="Electronic Toys">Electronic Toys</option>
+                                    {Object.keys(categoryMap).map((cat) => (
+                                        <option key={cat} value={cat}>{cat}</option>
+                                    ))}
                                 </select>
                                 {hasError('category') && <p className="text-red-500 text-sm mt-1">{errors.category}</p>}
                             </div>
@@ -187,9 +245,7 @@ const ProductCreateForm = () => {
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                     rows={3}
-                                    className={`w-full p-3 border rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${
-                                        hasError('description') ? 'border-red-400' : 'border-gray-300'
-                                    }`}
+                                    className={`w-full p-3 border rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${hasError('description') ? 'border-red-400' : 'border-gray-300'}`}
                                     placeholder="Describe the product..."
                                 />
                                 {hasError('description') && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
@@ -200,7 +256,6 @@ const ProductCreateForm = () => {
                         <div className="space-y-4">
                             <h2 className="text-lg font-medium text-gray-700 border-b pb-2">Pricing Information</h2>
 
-                            {/* Original Price */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Original Price ($) *</label>
                                 <input
@@ -211,15 +266,12 @@ const ProductCreateForm = () => {
                                     onBlur={handleBlur}
                                     min="0"
                                     step="0.01"
-                                    className={`w-full p-3 border rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${
-                                        hasError('originalPrice') ? 'border-red-400' : 'border-gray-300'
-                                    }`}
+                                    className={`w-full p-3 border rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${hasError('originalPrice') ? 'border-red-400' : 'border-gray-300'}`}
                                     placeholder="1800"
                                 />
                                 {hasError('originalPrice') && <p className="text-red-500 text-sm mt-1">{errors.originalPrice}</p>}
                             </div>
 
-                            {/* Discounted Price */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Discounted Price ($)</label>
                                 <input
@@ -232,7 +284,6 @@ const ProductCreateForm = () => {
                                 />
                             </div>
 
-                            {/* Discount Percentage */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Discount Percentage (%)</label>
                                 <input
@@ -244,9 +295,7 @@ const ProductCreateForm = () => {
                                     min="0"
                                     max="100"
                                     step="0.01"
-                                    className={`w-full p-3 border rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${
-                                        hasError('discountPercentage') ? 'border-red-400' : 'border-gray-300'
-                                    }`}
+                                    className={`w-full p-3 border rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${hasError('discountPercentage') ? 'border-red-400' : 'border-gray-300'}`}
                                     placeholder="22"
                                 />
                                 {hasError('discountPercentage') && <p className="text-red-500 text-sm mt-1">{errors.discountPercentage}</p>}
@@ -254,7 +303,7 @@ const ProductCreateForm = () => {
                         </div>
                     </div>
 
-                    {/* Image Upload Section */}
+                    {/* Image Upload */}
                     <div>
                         <h2 className="text-lg font-medium text-gray-700 border-b pb-2 mb-4">Product Images</h2>
                         <ImageUpload images={images} setImages={setImages} error={errors.images} />
@@ -268,12 +317,7 @@ const ProductCreateForm = () => {
                                 <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Days</label>
-                                        <input
-                                            type="number"
-                                            value={option.days}
-                                            disabled
-                                            className="w-full p-3 border rounded-lg bg-gray-100"
-                                        />
+                                        <input type="number" value={option.days} disabled className="w-full p-3 border rounded-lg bg-gray-100" />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Price ($) *</label>
@@ -284,21 +328,17 @@ const ProductCreateForm = () => {
                                             onBlur={() => handleRentalBlur(index)}
                                             min="0"
                                             step="0.01"
-                                            className={`w-full p-3 border rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${
-                                                touched[`rental-${index}-price`] && errors[`rental-${index}-price`] ? 'border-red-400' : 'border-gray-300'
-                                            }`}
+                                            className={`w-full p-3 border rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${touched[`rental-${index}-price`] && errors[`rental-${index}-price`] ? 'border-red-400' : 'border-gray-300'}`}
                                             placeholder="Enter rental price"
                                         />
-                                        {touched[`rental-${index}-price`] && errors[`rental-${index}-price`] && (
-                                            <p className="text-red-500 text-sm mt-1">{errors[`rental-${index}-price`]}</p>
-                                        )}
+                                        {touched[`rental-${index}-price`] && errors[`rental-${index}-price`] && <p className="text-red-500 text-sm mt-1">{errors[`rental-${index}-price`]}</p>}
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* Submit Button */}
+                    {/* Submit */}
                     <div className="text-center">
                         <button
                             type="submit"

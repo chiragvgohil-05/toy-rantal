@@ -1,25 +1,56 @@
 // src/pages/Login.jsx
-import React, { useState } from "react";
-import {NavLink} from "react-router-dom";
+import React, { useState, useContext } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import { loginUser, getProfile } from "../api";
+import { AuthContext } from "../context/AuthContext";
 
 const Login = () => {
-    const [formData, setFormData] = useState({
-        email: "",
-        password: "",
-    });
+    const navigate = useNavigate();
+    const { login } = useContext(AuthContext);
 
+    const [formData, setFormData] = useState({ email: "", password: "" });
     const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log("Login data:", formData);
-        alert("Logged in successfully!");
-        // You can integrate your auth API here
+        setLoading(true);
+        try {
+            const response = await loginUser(formData);
+
+            if (response?.data?.token) {
+                const token = response.data.token;
+                localStorage.setItem("token", token);
+
+                // Fetch user profile to get role
+                const profileRes = await getProfile(); // GET /me
+                if (profileRes?.data?.user) {
+                    const user = profileRes.data.user;
+                    login(user, token); // store user in context
+
+                    toast.success("Logged in successfully!");
+
+                    // Redirect based on role
+                    if (user.role === "admin") navigate("/admin/dashboard");
+                    else navigate("/");
+                } else {
+                    toast.error("Failed to fetch user profile!");
+                }
+            } else {
+                toast.error(response?.data?.message || "Login failed!");
+            }
+        } catch (error) {
+            console.error("Login error:", error);
+            toast.error(error?.message || "Network error");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -33,11 +64,8 @@ const Login = () => {
                 </p>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
-                    {/* Email */}
                     <div>
-                        <label className="block text-gray-700 font-semibold mb-2">
-                            Email
-                        </label>
+                        <label className="block text-gray-700 font-semibold mb-2">Email</label>
                         <input
                             type="email"
                             name="email"
@@ -49,11 +77,8 @@ const Login = () => {
                         />
                     </div>
 
-                    {/* Password */}
                     <div>
-                        <label className="block text-gray-700 font-semibold mb-2">
-                            Password
-                        </label>
+                        <label className="block text-gray-700 font-semibold mb-2">Password</label>
                         <div className="relative">
                             <input
                                 type={showPassword ? "text" : "password"}
@@ -74,16 +99,17 @@ const Login = () => {
                         </div>
                     </div>
 
-                    {/* Login Button */}
                     <button
                         type="submit"
-                        className="w-full py-3 bg-gradient-to-r from-purple-400 to-pink-400 text-white font-bold rounded-xl shadow-md hover:from-purple-500 hover:to-pink-500 transition-all"
+                        disabled={loading}
+                        className={`w-full py-3 bg-gradient-to-r from-purple-400 to-pink-400 text-white font-bold rounded-xl shadow-md hover:from-purple-500 hover:to-pink-500 transition-all ${
+                            loading ? "opacity-70 cursor-not-allowed" : ""
+                        }`}
                     >
-                        Login
+                        {loading ? "Logging in..." : "Login"}
                     </button>
                 </form>
 
-                {/* Additional Links */}
                 <div className="mt-4 flex justify-end text-sm text-gray-600">
                     <NavLink to="/register" className="hover:text-pink-500 transition">
                         Sign Up

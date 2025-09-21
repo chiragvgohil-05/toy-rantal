@@ -1,6 +1,6 @@
 // src/components/AdminLayout.jsx
-import React, { useState, useEffect } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import React, { useState, useEffect, useContext } from "react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
     FaTachometerAlt,
     FaBoxOpen,
@@ -10,8 +10,12 @@ import {
     FaUserCircle
 } from "react-icons/fa";
 import Logo from "../assets/logo2.png";
+import { AuthContext } from "../context/AuthContext";
 
 const AdminLayout = () => {
+    const { logout } = useContext(AuthContext);
+    const navigate = useNavigate();
+
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
@@ -21,36 +25,33 @@ const AdminLayout = () => {
             const mobile = window.innerWidth < 1024;
             setIsMobile(mobile);
 
-            // On larger screens, automatically open the sidebar
-            if (!mobile) {
-                setSidebarOpen(true);
-            } else {
-                setSidebarOpen(false);
-            }
+            if (!mobile) setSidebarOpen(true);
+            else setSidebarOpen(false);
         };
 
-        // Set initial state based on screen size
-        if (window.innerWidth >= 1024) {
-            setSidebarOpen(true);
-        }
+        if (window.innerWidth >= 1024) setSidebarOpen(true);
 
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    const toggleSidebar = () => {
-        setSidebarOpen(!sidebarOpen);
-    };
+    const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+    const closeSidebar = () => { if (isMobile) setSidebarOpen(false); };
 
-    const closeSidebar = () => {
-        if (isMobile) {
-            setSidebarOpen(false);
-        }
+    const handleLogout = () => {
+        // Remove token from localStorage
+        localStorage.removeItem("token");
+
+        // Clear user info from context
+        logout();
+
+        // Redirect to login page
+        navigate("/login", { replace: true });
     };
 
     return (
         <div className="flex h-screen bg-gradient-to-br from-blue-50 to-purple-50">
-            {/* Overlay for mobile when sidebar is open */}
+            {/* Overlay */}
             {sidebarOpen && isMobile && (
                 <div
                     className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
@@ -119,8 +120,6 @@ const AdminLayout = () => {
                         <span className={`${sidebarOpen ? "inline" : "hidden lg:inline"}`}>Orders</span>
                     </NavLink>
 
-
-                    {/* Profile Link */}
                     <NavLink
                         to="/admin/profile"
                         onClick={closeSidebar}
@@ -137,7 +136,10 @@ const AdminLayout = () => {
 
                 {/* Logout button */}
                 <div className="p-4 border-t border-gray-200">
-                    <button className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-gray-700 hover:bg-red-100 hover:text-red-600 transition-all">
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-gray-700 hover:bg-red-100 hover:text-red-600 transition-all"
+                    >
                         <FaSignOutAlt className="flex-shrink-0" />
                         <span className={`${sidebarOpen ? "inline" : "hidden lg:inline"}`}>Logout</span>
                     </button>
@@ -146,7 +148,6 @@ const AdminLayout = () => {
 
             {/* Main Content */}
             <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen && !isMobile ? "lg:ml-0" : "ml-0"}`}>
-                {/* Header */}
                 <header className="bg-white shadow-sm px-4 py-3 flex justify-between items-center sticky top-0 z-10">
                     <div className="flex items-center gap-2">
                         <button
@@ -171,14 +172,12 @@ const AdminLayout = () => {
                     </div>
                 </header>
 
-                {/* Page Content */}
                 <main className="flex-1 overflow-auto p-4 md:p-6 bg-transparent">
                     <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 min-h-full">
                         <Outlet />
                     </div>
                 </main>
 
-                {/* Footer */}
                 <footer className="bg-white shadow-sm px-6 py-3 text-center text-gray-500 text-sm">
                     <p>© {new Date().getFullYear()} ToyRent - Making Playtime Accessible for Everyone</p>
                 </footer>
