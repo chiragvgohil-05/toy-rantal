@@ -5,7 +5,7 @@ import {FaXmark} from "react-icons/fa6";
 const AdminProductCard = ({ product, onEdit, onDelete }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
+    const API_URL = process.env.REACT_APP_API_URL;
     // Calculate savings
     const savings = product.originalPrice && product.discountedPrice
         ? ((product.originalPrice - product.discountedPrice) / product.originalPrice * 100).toFixed(0)
@@ -22,7 +22,7 @@ const AdminProductCard = ({ product, onEdit, onDelete }) => {
             <div className="relative h-48 bg-gradient-to-r from-blue-50 to-purple-50 overflow-hidden">
                 {product.images && product.images.length > 0 ? (
                     <img
-                        src={product.images[0].url}
+                        src={`${API_URL.replace("/api", "")}${product.images[0].url}`}
                         alt={product.title}
                         className="w-full h-full object-cover"
                     />

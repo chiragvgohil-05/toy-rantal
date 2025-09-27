@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import ImageUpload from "../../../components/ImageUpload";
 import apiClient from "../../../apiClient";
+import { useNavigate } from "react-router-dom";   // ⬅️ import navigate hook
+import toast from "react-hot-toast";
+
 const ProductCreateForm = () => {
     // Map categories to IDs
     const categoryMap = {
@@ -25,6 +28,7 @@ const ProductCreateForm = () => {
             { days: 30, price: "" },
         ]
     });
+    const navigate = useNavigate();
 
     const [images, setImages] = useState([]);
     const [errors, setErrors] = useState({});
@@ -143,9 +147,11 @@ const ProductCreateForm = () => {
             });
 
             // Images
-            // images.forEach((img) => {
-            //     formData.append("images[]", img.file); // important: use images[]
-            // });
+            images.forEach((img) => {
+                formData.append("images[]", img.file); // send the actual File
+            });
+
+            console.log(images,"fsdfadf")
 
             // POST request using apiClient
             const response = await apiClient.post("/admin/products", formData, {
@@ -155,9 +161,8 @@ const ProductCreateForm = () => {
             });
 
             console.log(response, "chirag")
-
-            if (response.data.success) {
-                alert("Product created successfully!");
+            if (response.data.message) {
+                toast.success("Product created successfully!");
 
                 // Reset form
                 setProductData({
@@ -176,12 +181,13 @@ const ProductCreateForm = () => {
                 setImages([]);
                 setErrors({});
                 setTouched({});
+                navigate("/admin/products");
             } else {
-                alert(response.data.message || "Failed to create product");
+                toast.error(response.data.message || "Failed to create product");
             }
         } catch (err) {
             console.error(err);
-            alert(err.message || JSON.stringify(err));
+            toast.error(err.message || JSON.stringify(err));
         }
     };
 

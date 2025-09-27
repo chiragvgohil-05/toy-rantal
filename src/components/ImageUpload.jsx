@@ -5,6 +5,7 @@ import { FaTrash } from "react-icons/fa";
 const ImageUpload = ({ images, setImages, error }) => {
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef(null);
+    const API_URL = process.env.REACT_APP_API_URL;
 
     const handleFileChange = (e) => {
         const files = e.target.files;
@@ -99,13 +100,13 @@ const ImageUpload = ({ images, setImages, error }) => {
                 <div className="mt-6">
                     <h3 className="text-lg font-medium text-gray-700 mb-3">Image Previews</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        {images.map((img) => (
+                        {images.map((img,index) => (
                             <div
-                                key={img.id}
+                                key={index}
                                 className="relative border rounded-lg overflow-hidden group"
                             >
                                 <img
-                                    src={img.url}
+                                    src={img.url.startsWith("data:") ? img.url : `${API_URL.replace("/api", "")}${img.url}`}
                                     alt="Preview"
                                     className="w-full h-32 object-cover"
                                 />
@@ -120,7 +121,7 @@ const ImageUpload = ({ images, setImages, error }) => {
                                     <FaTrash />
                                 </button>
                                 <div className="p-2 text-xs text-gray-600 truncate">
-                                    {img.file.name}
+                                    {img.file?.name}
                                 </div>
                             </div>
                         ))}

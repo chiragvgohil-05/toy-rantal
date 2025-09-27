@@ -1,108 +1,95 @@
-// src/pages/admin/AdminProducts.jsx
-import React, { useState } from "react";
-import {NavLink, useNavigate} from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 import AdminProductCard from "../../../components/AdminProductCard";
-
-// Dummy data matching the AdminProductCard structure
-const products = [
-    {
-        id: 1,
-        title: "Premium Teddy Bear",
-        description: "A soft and cuddly premium teddy bear made with high-quality materials. Perfect for children of all ages.",
-        category: "Toys",
-        originalPrice: 350,
-        discountedPrice: 299,
-        discountPercentage: 15,
-        images: [
-            { url: "https://via.placeholder.com/300x200?text=Teddy+Bear", alt: "Teddy Bear" }
-        ],
-        rentalOptions: [
-            { days: 3, price: 50 },
-            { days: 7, price: 90 },
-            { days: 14, price: 150 }
-        ],
-        stock: 12
-    },
-    {
-        id: 2,
-        title: "Remote Control Car",
-        description: "A high-speed remote control car with realistic features and long battery life. Suitable for kids aged 6+.",
-        category: "Electronics",
-        originalPrice: 200,
-        discountedPrice: 179,
-        discountPercentage: 10,
-        images: [
-            { url: "https://via.placeholder.com/300x200?text=Toy+Car", alt: "Toy Car" }
-        ],
-        rentalOptions: [
-            { days: 2, price: 40 },
-            { days: 5, price: 75 },
-            { days: 10, price: 120 }
-        ],
-        stock: 20
-    },
-    {
-        id: 3,
-        title: "Educational Building Blocks",
-        description: "Colorful building blocks set that helps develop creativity and motor skills. Includes 150 pieces.",
-        category: "Educational",
-        originalPrice: 500,
-        discountedPrice: null,
-        discountPercentage: 0,
-        images: [
-            { url: "https://via.placeholder.com/300x200?text=Building+Blocks", alt: "Building Blocks" }
-        ],
-        rentalOptions: [
-            { days: 7, price: 100 },
-            { days: 14, price: 180 },
-            { days: 30, price: 300 }
-        ],
-        stock: 8
-    }
-];
+import apiClient from "../../../apiClient";
+import toast from "react-hot-toast";
 
 const AdminProducts = () => {
-    const [productList, setProductList] = useState(products);
+    const [productList, setProductList] = useState([]);
+    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const response = await apiClient.get("/admin/products");
+                const data = response.data || [];
+                console.log("Fetched products:", data);
+                // Map API response to AdminProductCard structure
+                const mappedProducts = data.map(prod => ({
+                    id: prod.id,
+                    title: prod.title,
+                    description: prod.description,
+                    category: prod.category_name || "Unknown",
+                    originalPrice: prod.actual_price || 0,
+                    discountedPrice: prod.discount_price || 0,
+                    discountPercentage: prod.actual_price && prod.discount_price
+                        ? Math.round((1 - prod.discount_price / prod.actual_price) * 100)
+                        : 0,
+                    images: Array.isArray(prod.images)
+                        ? prod.images.map(url => ({ url, alt: prod.title }))
+                        : [],
+                    rentalOptions: Array.isArray(prod.rentalOptions)
+                        ? prod.rentalOptions
+                        : [],
+                    stock: Array.isArray(prod.units) ? prod.units.length : 0,
+                }));
+
+                setProductList(mappedProducts);
+            } catch (err) {
+                console.error(err);
+                toast.error("Failed to fetch products");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProducts();
+    }, []);
 
     const handleEditProduct = (product) => {
         navigate(`/admin/products/edit/${product.id}`);
     };
 
-    const handleDeleteProduct = (product) => {
-        console.log("Deleting product:", product);
-        // Update the product list by filtering out the deleted product
-        setProductList(prevProducts => prevProducts.filter(p => p.id !== product.id));
+    const handleDeleteProduct = async (product) => {
+        if (!window.confirm(`Are you sure you want to delete "${product.title}"?`)) return;
+
+        try {
+            await apiClient.delete(`/admin/products/${product.id}`);
+            setProductList(prev => prev.filter(p => p.id !== product.id));
+            toast.success("Product deleted successfully");
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to delete product");
+        }
     };
+
+    if (loading) return <div className="text-center py-12">Loading products...</div>;
 
     return (
         <div>
             <div className="flex justify-between items-center mb-6 border-b pb-6">
                 <h2 className="text-2xl font-bold text-gray-700">Products Management</h2>
-                <button>
-                    <NavLink
-                        to="/admin/products/create"
-                        className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 font-bold text-white rounded-lg hover:bg-purple-700 transition"
-                    >
-                        Add New Product
-                    </NavLink>
-                </button>
+                <NavLink
+                    to="/admin/products/create"
+                    className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 font-bold text-white rounded-lg hover:bg-purple-700 transition"
+                >
+                    Add New Product
+                </NavLink>
             </div>
 
-            {/* Products Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {productList.map(product => (
-                    <AdminProductCard
-                        key={product.id}
-                        product={product}
-                        onEdit={handleEditProduct}
-                        onDelete={handleDeleteProduct}
-                    />
-                ))}
-            </div>
-
-            {/* Empty state */}
-            {productList.length === 0 && (
+            {productList.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {productList.map(product => (
+                        <AdminProductCard
+                            key={product.id}
+                            product={product}
+                            onEdit={handleEditProduct}
+                            onDelete={handleDeleteProduct}
+                        />
+                    ))}
+                </div>
+            ) : (
                 <div className="text-center py-12">
                     <div className="text-gray-400 text-5xl mb-4">
                         <i className="fas fa-box-open"></i>
