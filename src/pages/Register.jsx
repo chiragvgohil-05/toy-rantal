@@ -156,20 +156,6 @@ const Register = () => {
                         </div>
                     </div>
 
-                    {/* Avatar */}
-                    <div>
-                        <label className="block text-gray-700 font-semibold mb-2">
-                            Avatar
-                        </label>
-                        <input
-                            type="file"
-                            name="avatar"
-                            accept="image/*"
-                            onChange={handleChange}
-                            className="w-full"
-                        />
-                    </div>
-
                     {/* Submit */}
                     <button
                         type="submit"
