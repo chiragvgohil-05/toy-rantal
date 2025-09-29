@@ -52,9 +52,7 @@ const AdminProducts = () => {
     };
 
     const handleDeleteProduct = async (product) => {
-        if (!window.confirm(`Are you sure you want to delete "${product.title}"?`)) return;
-
-        try {
+               try {
             await apiClient.delete(`/admin/products/${product.id}`);
             setProductList(prev => prev.filter(p => p.id !== product.id));
             toast.success("Product deleted successfully");

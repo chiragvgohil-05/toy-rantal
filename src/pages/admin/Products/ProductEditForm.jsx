@@ -146,6 +146,7 @@ const ProductEditForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        // --- Validate all fields ---
         const newErrors = {};
         Object.keys(productData).forEach((key) => {
             if (key !== "rentalOptions" && key !== "discountPercentage") {
@@ -154,39 +155,77 @@ const ProductEditForm = () => {
             }
         });
 
+        // Validate rental options
         productData.rentalOptions.forEach((option, index) => {
-            if (!option.price) newErrors[`rental-${index}-price`] = "Rental price is required";
+            if (!option.price || option.price === "") {
+                newErrors[`rental-${index}-price`] = "Rental price is required";
+            } else if (isNaN(option.price) || parseFloat(option.price) <= 0) {
+                newErrors[`rental-${index}-price`] = "Please enter a valid price";
+            }
         });
 
+        // Validate images
         if (images.length === 0) newErrors.images = "At least one image is required";
 
         setErrors(newErrors);
-        setTouched(Object.keys(productData).reduce((acc, key) => ({ ...acc, [key]: true }), {}));
 
-        if (Object.keys(newErrors).length > 0) return;
+        // Mark all fields as touched
+        const allTouched = {};
+        Object.keys(productData).forEach(key => { allTouched[key] = true; });
+        productData.rentalOptions.forEach((_, index) => { allTouched[`rental-${index}-price`] = true; });
+        allTouched.images = true;
+        setTouched(allTouched);
+
+        if (Object.keys(newErrors).length > 0) {
+            toast.error("Please fix the validation errors");
+            return;
+        }
 
         try {
-            const formData = new FormData();
-            formData.append("title", productData.title);
-            formData.append("slug", productData.title.toLowerCase().replace(/\s+/g, "-"));
-            formData.append("category_id", categoryMap[productData.category] || 0);
-            formData.append("description", productData.description);
-            formData.append("actual_price", productData.originalPrice);
-            formData.append("discount_price", productData.discountPrice);
-            formData.append("active", 1);
+            // --- Separate existing images and new images ---
+            const existingImages = images.filter(img => img.url && !img.file).map(img => img.url);
+            const newImages = images.filter(img => img.file);
 
-            productData.rentalOptions.forEach((opt, i) => {
-                formData.append(`rentalOptions[${i}][days]`, opt.days);
-                formData.append(`rentalOptions[${i}][price]`, opt.price);
-            });
+            let uploadedImages = [...existingImages];
 
-            images.forEach((img) => {
-                if (img.file) formData.append("images[]", img.file);
-            });
+            // --- Upload new images in a single API call ---
+            if (newImages.length > 0) {
+                const formData = new FormData();
 
-            const response = await apiClient.put(`/admin/products/${id}`, formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
+                // Append all new images to formData
+                newImages.forEach((img) => {
+                    formData.append("images[]", img.file);
+                });
+
+                const res = await apiClient.post(`/admin/products/${id}/images`, formData, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+
+                if (res.data.images && res.data.images.length > 0) {
+                    uploadedImages.push(...res.data.images);
+                }
+            }
+
+            // --- Prepare update data ---
+            const updateData = {
+                title: productData.title,
+                slug: productData.title.toLowerCase().replace(/\s+/g, "-"),
+                category_id: categoryMap[productData.category] || 0,
+                description: productData.description,
+                actual_price: parseFloat(productData.originalPrice),
+                discount_price: productData.discountPrice ? parseFloat(productData.discountPrice) : null,
+                active: 1,
+                rentalOptions: productData.rentalOptions.map(opt => ({
+                    days: parseInt(opt.days),
+                    price: parseFloat(opt.price)
+                })),
+                images: uploadedImages // all URLs only
+            };
+
+            console.log("Sending update data:", updateData);
+
+            // --- Send PUT request to update product ---
+            const response = await apiClient.put(`/admin/products/${id}`, updateData);
 
             if (response.data.message) {
                 toast.success("Product updated successfully!");
@@ -195,8 +234,9 @@ const ProductEditForm = () => {
                 toast.error(response.data.message || "Failed to update product");
             }
         } catch (err) {
-            console.error(err);
-            toast.error(err.message || JSON.stringify(err));
+            console.error("Update error:", err);
+            console.error("Error details:", err.response?.data);
+            toast.error(err.response?.data?.message || err.message || "Failed to update product");
         }
     };
 
@@ -321,7 +361,7 @@ const ProductEditForm = () => {
                     {/* Images */}
                     <div>
                         <h2 className="text-lg font-medium text-gray-700 border-b pb-2 mb-4">Product Images</h2>
-                        <ImageUpload images={images} setImages={setImages} error={errors.images} />
+                        <ImageUpload images={images} setImages={setImages} error={errors.images} productId={id} />
                     </div>
 
                     {/* Rental Options */}
