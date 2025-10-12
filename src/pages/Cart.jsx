@@ -1,54 +1,117 @@
 // src/pages/Cart.jsx
-import React, { useState } from "react";
-import {useNavigate} from "react-router-dom";
-
-const initialCart = [
-    {
-        id: 1,
-        title: "Teddy Bear",
-        rentalDays: 7,
-        price: 550,
-        quantity: 1,
-        imageUrl: "https://picsum.photos/200?1",
-    },
-    {
-        id: 2,
-        title: "Toy Car",
-        rentalDays: 15,
-        price: 600,
-        quantity: 2,
-        imageUrl: "https://picsum.photos/200?2",
-    },
-];
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import apiClient from "../apiClient";
 
 const Cart = () => {
-    const [cartItems, setCartItems] = useState(initialCart);
+    const [cartItems, setCartItems] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [promoCode, setPromoCode] = useState("");
     const [discount, setDiscount] = useState(0);
     const [showPromoMessage, setShowPromoMessage] = useState(false);
     const [promoMessage, setPromoMessage] = useState("");
     const navigate = useNavigate();
 
-    const incrementQty = (id) => {
-        setCartItems((prev) =>
-            prev.map((item) =>
-                item.id === id ? { ...item, quantity: item.quantity + 1 } : item
-            )
-        );
+    // Fetch cart data from API
+    // In your Cart component, update the fetchCartData function:
+    // In your Cart component, update the fetchCartData function:
+    const fetchCartData = async () => {
+        try {
+            setLoading(true);
+            const response = await apiClient.get("/cart");
+
+            if (!response.data.success) {
+                throw new Error(response.data.message);
+            }
+
+            const cartData = response.data;
+
+            // Transform API response to match component structure
+            // In your fetchCartData function, update the transformation:
+            const transformedItems = cartData.items.map(item => ({
+                id: item.id,
+                title: item.title,
+                rentalDays: item.duration_days,
+                price: item.price_inr,
+                quantity: 1,
+                imageUrl: item.image_url || `https://picsum.photos/200?${item.product_id}`,
+                productId: item.product_id,
+                startDate: item.start_date,
+                endDate: item.end_date
+            }));
+
+            setCartItems(transformedItems);
+        } catch (error) {
+            console.error("Error fetching cart:", error);
+            alert(`Failed to load cart: ${error.message}`);
+            setCartItems([]); // Set empty array on error
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const decrementQty = (id) => {
-        setCartItems((prev) =>
-            prev.map((item) =>
-                item.id === id && item.quantity > 1
-                    ? { ...item, quantity: item.quantity - 1 }
-                    : item
-            )
-        );
+    useEffect(() => {
+        fetchCartData();
+    }, []);
+
+    const incrementQty = async (id) => {
+        // For rental items, we typically don't increment quantity
+        // Instead, we add the same item again with same configuration
+        try {
+            const item = cartItems.find(item => item.id === id);
+            if (item) {
+                // Add duplicate item with same configuration
+                await apiClient.post("/cart/items", {
+                    product_id: item.productId,
+                    option_index: await findOptionIndex(item.productId, item.rentalDays),
+                    start_date: item.startDate
+                });
+                await fetchCartData(); // Refresh cart
+            }
+        } catch (error) {
+            console.error("Error adding item:", error);
+            alert("Failed to add item");
+        }
     };
 
-    const removeItem = (id) => {
-        setCartItems((prev) => prev.filter((item) => item.id !== id));
+    const decrementQty = async (id) => {
+        // For rental items, we remove one instance
+        try {
+            await removeItem(id);
+        } catch (error) {
+            console.error("Error removing item:", error);
+        }
+    };
+
+    const removeItem = async (id) => {
+        try {
+            await apiClient.delete(`/cart/items/${id}`);
+            // Update local state immediately for better UX
+            setCartItems(prev => prev.filter(item => item.id !== id));
+        } catch (error) {
+            console.error("Error removing item:", error);
+            alert("Failed to remove item from cart");
+            // Refresh cart to sync with server
+            await fetchCartData();
+        }
+    };
+
+    // Helper function to find option index based on product and rental days
+    const findOptionIndex = async (productId, rentalDays) => {
+        try {
+            const response = await apiClient.get(`/products/${productId}`);
+            const product = response.data;
+            const rentalOptions = product.rentalOptions || [];
+
+            const index = rentalOptions.findIndex(option =>
+                option.days === rentalDays
+            );
+
+            return index >= 0 ? index : 0;
+        } catch (error) {
+            console.error("Error finding option index:", error);
+            return 0;
+        }
     };
 
     const applyPromoCode = () => {
@@ -83,13 +146,43 @@ const Cart = () => {
 
     const handleRedirectToys = () => {
         navigate("/toys");
+    };
+
+    const handleProceedToCheckout = () => {
+        if (cartItems.length === 0) {
+            alert("Your cart is empty!");
+            return;
+        }
+        navigate("/checkout", {
+            state: {
+                cartItems,
+                subtotal,
+                discountAmount,
+                totalAmount
+            }
+        });
+    };
+
+    if (loading) {
+        return (
+            <div className="bg-gradient-to-r from-yellow-50 via-pink-50 to-purple-50 min-h-screen py-10">
+                <div className="container mx-auto px-4">
+                    <div className="text-center py-20">
+                        <div className="text-6xl mb-4">🛒</div>
+                        <h2 className="text-2xl font-bold text-purple-700 mb-2">
+                            Loading your cart...
+                        </h2>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     return (
         <div className="bg-gradient-to-r from-yellow-50 via-pink-50 to-purple-50 min-h-screen py-10">
             <div className="container mx-auto px-4">
                 <h1 className="text-3xl font-extrabold text-purple-700 mb-6 text-center md:text-left">
-                    Your Cart
+                    Your Cart {totalItems > 0 && `(${totalItems} items)`}
                 </h1>
 
                 {cartItems.length === 0 ? (
@@ -101,7 +194,10 @@ const Cart = () => {
                         <p className="text-gray-600 mb-6">
                             Add some toys to rent and come back here!
                         </p>
-                        <button onClick={handleRedirectToys} className="px-6 py-3 bg-gradient-to-r from-purple-400 to-pink-400 text-white font-bold rounded-xl shadow-md hover:from-purple-500 hover:to-pink-500 transition-all">
+                        <button
+                            onClick={handleRedirectToys}
+                            className="px-6 py-3 bg-gradient-to-r from-purple-400 to-pink-400 text-white font-bold rounded-xl shadow-md hover:from-purple-500 hover:to-pink-500 transition-all"
+                        >
                             Continue Shopping
                         </button>
                     </div>
@@ -121,9 +217,19 @@ const Cart = () => {
                                     />
                                     <div className="sm:ml-4 flex-1 w-full">
                                         <div className="flex justify-between items-start">
-                                            <h3 className="text-lg font-bold text-purple-700">
-                                                {item.title}
-                                            </h3>
+                                            <div>
+                                                <h3 className="text-lg font-bold text-purple-700">
+                                                    {item.title}
+                                                </h3>
+                                                <p className="text-gray-600 text-sm">
+                                                    Rental Period: {item.rentalDays} days
+                                                </p>
+                                                <p className="text-gray-600 text-sm">
+                                                    Start: {new Date(item.startDate).toLocaleDateString()}
+                                                    {" → "}
+                                                    End: {new Date(item.endDate).toLocaleDateString()}
+                                                </p>
+                                            </div>
                                             <button
                                                 onClick={() => removeItem(item.id)}
                                                 className="text-red-500 hover:text-red-700 transition-colors"
@@ -134,30 +240,30 @@ const Cart = () => {
                                                 </svg>
                                             </button>
                                         </div>
-                                        <p className="text-gray-600">
-                                            Rental: {item.rentalDays} days
-                                        </p>
-                                        <p className="text-gray-800 font-semibold mt-1">
-                                            ₹{item.price} per unit
+
+                                        <p className="text-gray-800 font-semibold mt-2">
+                                            ₹{item.price} for {item.rentalDays} days
                                         </p>
 
-                                        {/* Quantity Controls */}
+                                        {/* Quantity Controls - For rental, usually 1 per item */}
                                         <div className="flex items-center mt-4 justify-between">
                                             <div className="flex items-center">
                                                 <button
                                                     onClick={() => decrementQty(item.id)}
-                                                    className="px-3 py-1 bg-gray-200 rounded-l-lg hover:bg-gray-300 transition"
-                                                    aria-label="Decrease quantity"
+                                                    className="px-3 py-1 bg-gray-200 rounded-l-lg hover:bg-gray-300 transition disabled:opacity-50"
+                                                    aria-label="Remove one"
+                                                    title="Remove this rental item"
                                                 >
                                                     -
                                                 </button>
                                                 <span className="px-4 py-1 bg-gray-100 border-t border-b text-gray-800 min-w-[3rem] text-center">
-                          {item.quantity}
-                        </span>
+                                                    {item.quantity}
+                                                </span>
                                                 <button
                                                     onClick={() => incrementQty(item.id)}
                                                     className="px-3 py-1 bg-gray-200 rounded-r-lg hover:bg-gray-300 transition"
-                                                    aria-label="Increase quantity"
+                                                    aria-label="Add another"
+                                                    title="Add another rental with same configuration"
                                                 >
                                                     +
                                                 </button>
@@ -181,7 +287,7 @@ const Cart = () => {
                             <div className="space-y-3 mb-4">
                                 <div className="flex justify-between">
                                     <span>Items ({cartItems.length}):</span>
-                                    <span>₹{subtotal}</span>
+                                    <span>₹{subtotal.toFixed(2)}</span>
                                 </div>
 
                                 {discount > 0 && (
@@ -197,12 +303,47 @@ const Cart = () => {
                                 </div>
                             </div>
 
-                            <button onClick={()=>navigate("/checkout")} className="w-full py-3 bg-gradient-to-r from-purple-400 to-pink-400 text-white font-bold rounded-xl shadow-md hover:from-purple-500 hover:to-pink-500 transition-all transform hover:-translate-y-0.5">
+                            {/* Promo Code Section */}
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Promo Code
+                                </label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={promoCode}
+                                        onChange={(e) => setPromoCode(e.target.value)}
+                                        placeholder="Enter promo code"
+                                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    />
+                                    <button
+                                        onClick={applyPromoCode}
+                                        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+                                    >
+                                        Apply
+                                    </button>
+                                </div>
+                                {showPromoMessage && (
+                                    <p className={`text-sm mt-2 ${
+                                        discount > 0 ? 'text-green-600' : 'text-red-600'
+                                    }`}>
+                                        {promoMessage}
+                                    </p>
+                                )}
+                            </div>
+
+                            <button
+                                onClick={handleProceedToCheckout}
+                                className="w-full py-3 bg-gradient-to-r from-purple-400 to-pink-400 text-white font-bold rounded-xl shadow-md hover:from-purple-500 hover:to-pink-500 transition-all transform hover:-translate-y-0.5"
+                            >
                                 Proceed to Checkout
                             </button>
 
                             <div className="text-center mt-4">
-                                <button className="text-purple-600 hover:text-purple-800 text-sm font-medium" onClick={handleRedirectToys}>
+                                <button
+                                    className="text-purple-600 hover:text-purple-800 text-sm font-medium"
+                                    onClick={handleRedirectToys}
+                                >
                                     Continue Shopping
                                 </button>
                             </div>

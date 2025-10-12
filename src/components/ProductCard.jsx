@@ -1,6 +1,8 @@
 // src/components/ProductCard.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import apiClient from "../apiClient";
+import toast from "react-hot-toast";
 
 // Simple global store for managing active cards
 let activeCardId = null;
@@ -24,7 +26,7 @@ const ProductCard = ({
                          id: propId,
                          title = "Premium Toy",
                          description = "A fun and educational toy that keeps kids entertained.",
-                         imageUrl = "https://img.freepik.com/free-photo/kids-toys_144627-38648.jpg",
+                         imageUrl,
                          originalPrice = 1500,
                          discountedPrice = 1200,
                          discountPercentage = 20,
@@ -40,9 +42,17 @@ const ProductCard = ({
                          overlayTitle = "Choose Rental Option",
                          closeButtonText = "Close",
                      }) => {
-    const [id] = useState(() => propId || autoId++); // Use provided ID or generate one
+    const [id] = useState(() => propId || autoId++);
     const [isOpen, setIsOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [startDate, setStartDate] = useState("");
     const navigate = useNavigate();
+
+    // Set default start date to today
+    useEffect(() => {
+        const today = new Date().toISOString().split('T')[0];
+        setStartDate(today);
+    }, []);
 
     useEffect(() => {
         const unsubscribe = subscribe((activeId) => {
@@ -59,20 +69,46 @@ const ProductCard = ({
         }
     };
 
-    const handleOptionClick = (option) => {
-        const selectionInfo = {
-            productId: id,
-            productTitle: title,
-            ...option,
-        };
-
-        if (onOptionSelect) {
-            onOptionSelect(selectionInfo);
-        } else {
-            console.log(`Card ${id} → Selected: ${option.days} days - ₹${option.price}`);
+    const handleAddToCart = async (option, optionIndex) => {
+        if (!startDate) {
+            toast.error("Please select a start date first");
+            return;
         }
 
-        setGlobalActiveCard(null);
+        setLoading(true);
+        try {
+            const response = await apiClient.post("/cart/items", {
+                product_id: id,
+                option_index: optionIndex,
+                start_date: startDate,
+            });
+
+            if (response.data.success) {
+                toast.success(`Added ${title} (${option.days} days) to cart!`);
+
+                if (onOptionSelect) {
+                    const selectionInfo = {
+                        productId: id,
+                        productTitle: title,
+                        ...option,
+                    };
+                    onOptionSelect(selectionInfo);
+                }
+
+                setGlobalActiveCard(null);
+            } else {
+                toast.error("Failed to add item to cart: " + (response.data.message || "Unknown error"));
+            }
+        } catch (error) {
+            console.error("Error adding to cart:", error);
+            if (error.response?.data?.message) {
+                toast.error("Failed to add to cart: " + error.response.data.message);
+            } else {
+                toast.error("Failed to add item to cart. Please try again.");
+            }
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Calculate discount percentage if not provided
@@ -81,10 +117,10 @@ const ProductCard = ({
 
     const navigateToDetails = () => {
         navigate(`/products/${id}`);
-    }
+    };
 
     return (
-        <div className={`relative max-w-sm bg-white shadow-lg rounded-2xl overflow-hidden border border-gray-200 m-4 ${className}`}>
+        <div className={`relative w-80 bg-white shadow-lg rounded-2xl overflow-hidden border border-gray-200 ${className}`}>
             {/* Discount Badge */}
             {showDiscountBadge && calculatedDiscount > 0 && (
                 <div className="absolute top-3 right-3 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md z-10">
@@ -106,7 +142,7 @@ const ProductCard = ({
             {/* Content */}
             <div className="p-4">
                 <h2 className="text-xl font-semibold text-gray-800 cursor-pointer" onClick={navigateToDetails}>{title}</h2>
-                <p className="text-gray-600 text-sm mt-2">
+                <p className="text-gray-600 text-sm mt-2 line-clamp-2">
                     {description}
                 </p>
 
@@ -121,9 +157,14 @@ const ProductCard = ({
                 {/* Add to Cart Button */}
                 <button
                     onClick={toggleOverlay}
-                    className="w-full mt-4 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition"
+                    disabled={loading}
+                    className={`w-full mt-4 py-2 rounded-lg font-medium transition ${
+                        loading
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}
                 >
-                    {isOpen ? "Hide Options" : buttonText}
+                    {loading ? "Adding..." : (isOpen ? "Hide Options" : buttonText)}
                 </button>
             </div>
 
@@ -134,31 +175,56 @@ const ProductCard = ({
                     onClick={() => setGlobalActiveCard(null)}
                 >
                     <div
-                        className="w-full"
+                        className="w-full max-h-full overflow-y-auto"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
                             {overlayTitle}
                         </h3>
 
-                        <div className="space-y-2">
-                            {rentalOptions.map((option) => (
+                        {/* Start Date Selection */}
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Rental Start Date
+                            </label>
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                min={new Date().toISOString().split('T')[0]}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                        </div>
+
+                        <div className="space-y-2 mb-4">
+                            {rentalOptions.map((option, index) => (
                                 <div
                                     key={option.days}
-                                    onClick={() => handleOptionClick(option)}
-                                    className="flex justify-between items-center bg-gray-100 px-4 py-2 rounded-lg hover:bg-gray-200 cursor-pointer transition"
+                                    className="flex justify-between items-center bg-gray-100 px-4 py-3 rounded-lg hover:bg-gray-200 cursor-pointer transition"
                                 >
-                                    <span className="font-medium">{option.days} Days</span>
-                                    <span className="text-blue-600 font-semibold">
-                    ₹{option.price}
-                  </span>
+                                    <div className="flex-1">
+                                        <div className="font-medium">{option.days} Days</div>
+                                        <div className="text-blue-600 font-semibold">₹{option.price}</div>
+                                    </div>
+                                    <button
+                                        onClick={() => handleAddToCart(option, index)}
+                                        disabled={loading}
+                                        className={`px-4 py-2 rounded-lg font-medium transition ${
+                                            loading
+                                                ? 'bg-gray-400 cursor-not-allowed'
+                                                : 'bg-green-500 text-white hover:bg-green-600'
+                                        }`}
+                                    >
+                                        {loading ? "..." : "Add"}
+                                    </button>
                                 </div>
                             ))}
                         </div>
 
                         <button
                             onClick={() => setGlobalActiveCard(null)}
-                            className="block mt-4 mx-auto bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
+                            disabled={loading}
+                            className="w-full bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition disabled:bg-gray-400"
                         >
                             {closeButtonText}
                         </button>

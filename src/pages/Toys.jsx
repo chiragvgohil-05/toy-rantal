@@ -1,125 +1,97 @@
 // src/pages/Toys.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ProductCard from "../components/ProductCard";
-
-const products = [
-    {
-        id: 1,
-        title: "Teddy Bear",
-        description: "Soft and cuddly teddy bear for kids.",
-        imageUrl: "https://picsum.photos/200?1",
-        originalPrice: 500,
-        discountedPrice: 350,
-        discountPercentage: 30,
-        rentalOptions: [
-            { days: 7, price: 550 },
-            { days: 15, price: 950 },
-            { days: 30, price: 1700 },
-        ],
-        badge: "Popular",
-        category: "Soft Toys"
-    },
-    {
-        id: 2,
-        title: "Toy Car",
-        description: "Fast and fun toy car.",
-        imageUrl: "https://picsum.photos/200?2",
-        originalPrice: 300,
-        discountedPrice: 200,
-        discountPercentage: 33,
-        rentalOptions: [
-            { days: 7, price: 350 },
-            { days: 15, price: 600 },
-            { days: 30, price: 1100 },
-        ],
-        badge: "New",
-        category: "Vehicles"
-    },
-    {
-        id: 3,
-        title: "Building Blocks",
-        description: "Creative building blocks set.",
-        imageUrl: "https://picsum.photos/200?3",
-        originalPrice: 700,
-        discountedPrice: 500,
-        discountPercentage: 28,
-        rentalOptions: [
-            { days: 7, price: 750 },
-            { days: 15, price: 1300 },
-            { days: 30, price: 2400 },
-        ],
-        badge: "Hot",
-        category: "Blocks"
-    },
-    {
-        id: 4,
-        title: "Barbie Doll",
-        description: "Beautiful fashion doll for creative play.",
-        imageUrl: "https://picsum.photos/200?4",
-        originalPrice: 450,
-        discountedPrice: 350,
-        discountPercentage: 22,
-        rentalOptions: [
-            { days: 7, price: 450 },
-            { days: 15, price: 800 },
-        ],
-        badge: "Trending",
-        category: "Dolls"
-    },
-    {
-        id: 5,
-        title: "Jigsaw Puzzle",
-        description: "100-piece educational puzzle for kids.",
-        imageUrl: "https://picsum.photos/200?5",
-        originalPrice: 400,
-        discountedPrice: 300,
-        discountPercentage: 25,
-        rentalOptions: [
-            { days: 15, price: 550 },
-            { days: 30, price: 1000 },
-        ],
-        badge: "Educational",
-        category: "Puzzles"
-    },
-    {
-        id: 6,
-        title: "Robot Toy",
-        description: "Interactive robot with lights and sounds.",
-        imageUrl: "https://picsum.photos/200?6",
-        originalPrice: 800,
-        discountedPrice: 600,
-        discountPercentage: 25,
-        rentalOptions: [
-            { days: 7, price: 850 },
-            { days: 15, price: 1500 },
-            { days: 30, price: 2800 },
-        ],
-        badge: "Interactive",
-        category: "Electronic Toys"
-    },
-];
-
-const categories = ["All", "Soft Toys", "Vehicles", "Dolls", "Blocks", "Puzzles", "Electronic Toys"];
+import apiClient from "../apiClient"; // ✅ Import your API client
 
 const Toys = () => {
+    const [products, setProducts] = useState([]);
+    const [categories, setCategories] = useState([{ id: 0, name: "All", slug: "all" }]);
     const [selectedCategory, setSelectedCategory] = useState("All");
-    const [selectedRentalOption, setSelectedRentalOption] = useState("");
-    const [priceRange, setPriceRange] = useState([0, 3000]);
+    const [searchQuery, setSearchQuery] = useState("");
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
 
-    const handleOptionSelect = (productId, option) => {
-        console.log(`Selected rental option for product ${productId}: ${option.days} days for ₹${option.price}`);
-    };
+    // ✅ Fetch products from API
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const response = await apiClient.get("/products");
+                const formattedProducts = response.data.map((p) => {
+                    const discountPercentage =
+                        p.actual_price && p.discount_price
+                            ? Math.round(((p.actual_price - p.discount_price) / p.actual_price) * 100)
+                            : 0;
 
+                    return {
+                        id: p.id,
+                        title: p.title,
+                        description: p.description,
+                        imageUrl: `${process.env.REACT_APP_API_URL.replace("/api", "")}${p.images[0]}`,
+                        originalPrice: p.actual_price,
+                        discountedPrice: p.discount_price,
+                        discountPercentage,
+                        category: p.category_name || "Uncategorized",
+                        badge: p.badge || "New",
+                        rentalOptions: p.rentalOptions || [], // ✅ add this
+                    };
+                });
+
+                setProducts(formattedProducts);
+                setLoading(false);
+            } catch (err) {
+                console.error("Error fetching products:", err);
+                setLoading(false);
+            }
+        };
+
+        fetchProducts();
+    }, []);
+
+    // ✅ Fetch categories from API
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const response = await apiClient.get("/categories");
+                if (response.data && Array.isArray(response.data)) {
+                    const formatted = response.data.map((cat) => ({
+                        id: cat.id,
+                        name: cat.name,
+                        slug: cat.slug,
+                    }));
+                    setCategories([{ id: 0, name: "All", slug: "all" }, ...formatted]);
+                } else {
+                    console.warn("Unexpected category response:", response.data);
+                }
+            } catch (error) {
+                console.error("Error fetching categories:", error);
+            }
+        };
+        fetchCategories();
+    }, []);
+
+    // ✅ Filter products based on selected category & search query
     const filteredProducts = products.filter(
         (p) =>
-            (selectedCategory === "All" || p.category === selectedCategory) &&
-            (!selectedRentalOption || p.rentalOptions.some(opt => opt.days === parseInt(selectedRentalOption))) &&
-            p.discountedPrice >= priceRange[0] &&
-            p.discountedPrice <= priceRange[1]
+            (selectedCategory === "All" || p.category.toLowerCase() === selectedCategory.toLowerCase()) &&
+            (p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                p.description.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
-    const allRentalOptions = [...new Set(products.flatMap(p => p.rentalOptions.map(opt => opt.days)))].sort((a, b) => a - b);
+    const handleOptionSelect = (selectionInfo) => {
+        console.log("Selected option:", selectionInfo);
+        // You can add this to a cart or state management here
+    };
+
+    if (loading) {
+        return (
+            <div className="bg-gradient-to-r from-yellow-50 via-pink-50 to-purple-50 min-h-screen py-10 flex justify-center items-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-pink-500 mx-auto"></div>
+                    <p className="mt-4 text-purple-700 font-semibold">Loading products...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-gradient-to-r from-yellow-50 via-pink-50 to-purple-50 min-h-screen py-10">
@@ -135,7 +107,7 @@ const Toys = () => {
                     </button>
                 </div>
 
-                {/* Sidebar Filters - visible on desktop */}
+                {/* Sidebar Filters */}
                 <aside className="hidden lg:block bg-white rounded-3xl shadow-xl p-6 h-fit sticky top-32 border-4 border-pink-300">
                     {/* Category Filter */}
                     <div className="mb-6 border-b border-gray-200 pb-4">
@@ -145,68 +117,39 @@ const Toys = () => {
                         <div className="flex flex-wrap gap-2">
                             {categories.map((cat) => (
                                 <button
-                                    key={cat}
-                                    onClick={() => setSelectedCategory(cat)}
-                                    className={`px-3 py-2 rounded-xl transition-all ${selectedCategory === cat
-                                        ? "bg-pink-400 text-white font-bold shadow-md"
-                                        : "bg-gray-100 hover:bg-pink-100 text-gray-700"
+                                    key={cat.id}
+                                    onClick={() => setSelectedCategory(cat.name)}
+                                    className={`px-3 py-2 rounded-xl transition-all ${
+                                        selectedCategory === cat.name
+                                            ? "bg-pink-400 text-white font-bold shadow-md"
+                                            : "bg-gray-100 hover:bg-pink-100 text-gray-700"
                                     }`}
                                 >
-                                    {cat}
+                                    {cat.name}
                                 </button>
                             ))}
                         </div>
                     </div>
 
-                    {/* Rental Option Filter */}
+                    {/* 🔎 Product Search */}
                     <div className="mb-6 border-b border-gray-200 pb-4">
                         <h3 className="font-semibold text-purple-700 mb-3 text-lg flex items-center">
-                            <span className="mr-2">⏱️</span> Rental Period
+                            <span className="mr-2">🔎</span> Search Product
                         </h3>
-                        <div className="flex flex-wrap gap-2">
-                            {allRentalOptions.map((days) => (
-                                <button
-                                    key={days}
-                                    onClick={() => setSelectedRentalOption(selectedRentalOption === days.toString() ? "" : days.toString())}
-                                    className={`px-3 py-2 rounded-xl transition-all ${selectedRentalOption === days.toString()
-                                        ? "bg-yellow-400 text-gray-800 font-bold shadow-md"
-                                        : "bg-gray-100 hover:bg-yellow-100 text-gray-700"
-                                    }`}
-                                >
-                                    {days} days
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Price Range Filter */}
-                    <div className="mb-6">
-                        <h3 className="font-semibold text-purple-700 mb-3 text-lg flex items-center">
-                            <span className="mr-2">💰</span> Price Range
-                        </h3>
-                        <div className="px-2">
-                            <input
-                                type="range"
-                                min="0"
-                                max="3000"
-                                step="100"
-                                value={priceRange[1]}
-                                onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                                className="w-full h-2 bg-pink-200 rounded-lg appearance-none cursor-pointer"
-                            />
-                            <div className="flex justify-between text-sm text-gray-600 mt-1">
-                                <span>₹0</span>
-                                <span>Up to ₹{priceRange[1]}</span>
-                            </div>
-                        </div>
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search by name or description..."
+                            className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-pink-400 outline-none"
+                        />
                     </div>
 
                     {/* Reset Filters Button */}
                     <button
                         onClick={() => {
                             setSelectedCategory("All");
-                            setSelectedRentalOption("");
-                            setPriceRange([0, 3000]);
+                            setSearchQuery("");
                         }}
                         className="w-full py-2 bg-gradient-to-r from-purple-400 to-pink-400 text-white font-bold rounded-xl shadow-md hover:from-purple-500 hover:to-pink-500 transition-all transform hover:scale-105"
                     >
@@ -216,7 +159,6 @@ const Toys = () => {
 
                 {/* Product Cards Section */}
                 <div className="lg:col-span-3">
-                    {/* Results Count */}
                     <div className="bg-white rounded-2xl p-4 mb-6 shadow-md border border-pink-200">
                         <h2 className="text-xl font-bold text-purple-700">
                             {filteredProducts.length} {filteredProducts.length === 1 ? "Product" : "Products"} Found
@@ -227,14 +169,11 @@ const Toys = () => {
                                     Category: {selectedCategory}
                                 </span>
                             )}
-                            {selectedRentalOption && (
+                            {searchQuery && (
                                 <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm">
-                                    Rental: {selectedRentalOption} days
+                                    Search: {searchQuery}
                                 </span>
                             )}
-                            <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm">
-                                Price: up to ₹{priceRange[1]}
-                            </span>
                         </div>
                     </div>
 
@@ -242,19 +181,29 @@ const Toys = () => {
                     <div className="pr-2 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 pb-6">
                         {filteredProducts.length > 0 ? (
                             filteredProducts.map((product) => (
-                                <ProductCard
+                                <div
                                     key={product.id}
-                                    {...product}
-                                    onOptionSelect={handleOptionSelect}
-                                    className="shadow-xl border-4 border-pink-200 hover:border-yellow-300 transform hover:scale-105 transition duration-300 relative overflow-hidden"
+                                    className="transform hover:scale-105 transition-transform duration-300"
                                 >
-                                </ProductCard>
+                                    <ProductCard
+                                        id={product.id}
+                                        title={product.title}
+                                        description={product.description}
+                                        imageUrl={product.imageUrl}
+                                        originalPrice={product.originalPrice}
+                                        discountedPrice={product.discountedPrice}
+                                        discountPercentage={product.discountPercentage}
+                                        rentalOptions={product.rentalOptions} // ✅ now it exists
+                                        onOptionSelect={handleOptionSelect}
+                                        className="shadow-xl rounded-2xl bg-white border-4 border-pink-200 hover:border-yellow-300"
+                                    />
+                                </div>
                             ))
                         ) : (
                             <div className="col-span-full text-center py-10">
                                 <div className="text-5xl mb-4">😢</div>
                                 <h3 className="text-xl font-bold text-purple-700">No products found</h3>
-                                <p className="text-gray-600">Try adjusting your filters to see more results.</p>
+                                <p className="text-gray-600">Try adjusting your filters or search again.</p>
                             </div>
                         )}
                     </div>
@@ -282,68 +231,39 @@ const Toys = () => {
                                 <div className="flex flex-wrap gap-2">
                                     {categories.map((cat) => (
                                         <button
-                                            key={cat}
-                                            onClick={() => setSelectedCategory(cat)}
-                                            className={`px-3 py-2 rounded-xl transition-all ${selectedCategory === cat
-                                                ? "bg-pink-400 text-white font-bold shadow-md"
-                                                : "bg-gray-100 hover:bg-pink-100 text-gray-700"
+                                            key={cat.id}
+                                            onClick={() => setSelectedCategory(cat.name)}
+                                            className={`px-3 py-2 rounded-xl transition-all ${
+                                                selectedCategory === cat.name
+                                                    ? "bg-pink-400 text-white font-bold shadow-md"
+                                                    : "bg-gray-100 hover:bg-pink-100 text-gray-700"
                                             }`}
                                         >
-                                            {cat}
+                                            {cat.name}
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
-                            {/* Rental Option Filter */}
+                            {/* Search Input */}
                             <div className="mb-6 border-b border-gray-200 pb-4">
                                 <h3 className="font-semibold text-purple-700 mb-3 text-lg flex items-center">
-                                    <span className="mr-2">⏱️</span> Rental Period
+                                    <span className="mr-2">🔎</span> Search Product
                                 </h3>
-                                <div className="flex flex-wrap gap-2">
-                                    {allRentalOptions.map((days) => (
-                                        <button
-                                            key={days}
-                                            onClick={() => setSelectedRentalOption(selectedRentalOption === days.toString() ? "" : days.toString())}
-                                            className={`px-3 py-2 rounded-xl transition-all ${selectedRentalOption === days.toString()
-                                                ? "bg-yellow-400 text-gray-800 font-bold shadow-md"
-                                                : "bg-gray-100 hover:bg-yellow-100 text-gray-700"
-                                            }`}
-                                        >
-                                            {days} days
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Price Range Filter */}
-                            <div className="mb-6">
-                                <h3 className="font-semibold text-purple-700 mb-3 text-lg flex items-center">
-                                    <span className="mr-2">💰</span> Price Range
-                                </h3>
-                                <div className="px-2">
-                                    <input
-                                        type="range"
-                                        min="0"
-                                        max="3000"
-                                        step="100"
-                                        value={priceRange[1]}
-                                        onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                                        className="w-full h-2 bg-pink-200 rounded-lg appearance-none cursor-pointer"
-                                    />
-                                    <div className="flex justify-between text-sm text-gray-600 mt-1">
-                                        <span>₹0</span>
-                                        <span>Up to ₹{priceRange[1]}</span>
-                                    </div>
-                                </div>
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Search by name or description..."
+                                    className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-pink-400 outline-none"
+                                />
                             </div>
 
                             {/* Reset Button */}
                             <button
                                 onClick={() => {
                                     setSelectedCategory("All");
-                                    setSelectedRentalOption("");
-                                    setPriceRange([0, 3000]);
+                                    setSearchQuery("");
                                 }}
                                 className="w-full py-2 bg-gradient-to-r from-purple-400 to-pink-400 text-white font-bold rounded-xl shadow-md hover:from-purple-500 hover:to-pink-500 transition-all transform hover:scale-105"
                             >

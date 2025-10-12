@@ -1,11 +1,14 @@
 // src/pages/Home.js
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Slider from "../components/Slider";
 import ProductCard from "../components/ProductCard";
 import '../style/Home.css';
 import Collections from "../components/Collections";
+import apiClient from "../apiClient";
 
 const Home = () => {
+    const [products, setProducts] = useState([]);
+
     const slides = [
         {
             id: 1,
@@ -33,50 +36,34 @@ const Home = () => {
         },
     ];
     // Create an array of products
-    const products = [
-        {
-            id: 1,
-            title: "Premium Building Blocks",
-            description: "Educational building blocks for creative play and learning.",
-            imageUrl: "https://img.freepik.com/free-photo/colorful-plastic-building-blocks_53876-87619.jpg",
-            originalPrice: 1800,
-            discountedPrice: 1400,
-            discountPercentage: 22,
-            rentalOptions: [
-                { days: 7, price: 400 },
-                { days: 15, price: 750 },
-                { days: 30, price: 1300 },
-            ]
-        },
-        {
-            id: 2,
-            title: "Remote Control Car",
-            description: "High-speed RC car with realistic features and long battery life.",
-            imageUrl: "https://img.freepik.com/free-photo/toy-car-isolated-white-background_130265-7234.jpg",
-            originalPrice: 2500,
-            discountedPrice: 2000,
-            discountPercentage: 20,
-            rentalOptions: [
-                { days: 7, price: 600 },
-                { days: 15, price: 1100 },
-                { days: 30, price: 1900 },
-            ]
-        },
-        {
-            id: 3,
-            title: "Educational Science Kit",
-            description: "Complete science experiment kit for young explorers.",
-            imageUrl: "https://img.freepik.com/free-photo/science-tools-blue-background_23-2147850639.jpg",
-            originalPrice: 2200,
-            discountedPrice: 1800,
-            discountPercentage: 18,
-            rentalOptions: [
-                { days: 7, price: 550 },
-                { days: 15, price: 950 },
-                { days: 30, price: 1700 },
-            ]
-        }
-    ];
+    useEffect(() => {
+        apiClient
+            .get("/products")
+            .then((response) => {
+                const formattedProducts = response.data.map((p) => {
+                    const discountPercentage =
+                        p.actual_price && p.discount_price
+                            ? Math.round(((p.actual_price - p.discount_price) / p.actual_price) * 100)
+                            : 0;
+                    console.log(`${process.env.REACT_APP_API_URL.replace("/api", "")}${p.images[0]}`)
+                    return {
+                        id: p.id,
+                        title: p.title,
+                        description: p.description,
+                        imageUrl: `${process.env.REACT_APP_API_URL.replace("/api", "")}${p.images[0]}`,
+                        originalPrice: p.actual_price,
+                        discountedPrice: p.discount_price,
+                        discountPercentage,
+                        rentalOptions: p.rentalOptions || [],
+                    };
+                });
+
+                setProducts(formattedProducts);
+            })
+            .catch((err) => {
+                console.error("Error fetching products:", err);
+            });
+    }, []);
 
     // Handle rental option selection
     const handleOptionSelect = (selectionInfo) => {
