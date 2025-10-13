@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../apiClient";
+import toast from "react-hot-toast";
 
 const Cart = () => {
     const [cartItems, setCartItems] = useState([]);
@@ -148,20 +149,30 @@ const Cart = () => {
         navigate("/toys");
     };
 
-    const handleProceedToCheckout = () => {
+    const handleProceedToCheckout = async () => {
         if (cartItems.length === 0) {
-            alert("Your cart is empty!");
+            toast.error("Your cart is empty!");
             return;
         }
-        navigate("/checkout", {
-            state: {
-                cartItems,
-                subtotal,
-                discountAmount,
-                totalAmount
+
+        try {
+            const response = await apiClient.post("/orders", {});
+
+            // If your API returns the created order
+            console.log(response, "response")
+            if (response.data.success && response.data.order_id) {
+                toast.success("Order created successfully!");
+                navigate(`/orders/${response.data.order_id}`); // or "/order-confirmation"
+            } else {
+                throw new Error("Failed to create order");
             }
-        });
+        } catch (error) {
+            console.error("Error creating order:", error);
+            toast.error(`Failed to create order: ${error.message}`);
+        }
     };
+
+
 
     if (loading) {
         return (
@@ -305,24 +316,6 @@ const Cart = () => {
 
                             {/* Promo Code Section */}
                             <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Promo Code
-                                </label>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        value={promoCode}
-                                        onChange={(e) => setPromoCode(e.target.value)}
-                                        placeholder="Enter promo code"
-                                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                    />
-                                    <button
-                                        onClick={applyPromoCode}
-                                        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
-                                    >
-                                        Apply
-                                    </button>
-                                </div>
                                 {showPromoMessage && (
                                     <p className={`text-sm mt-2 ${
                                         discount > 0 ? 'text-green-600' : 'text-red-600'
@@ -336,7 +329,7 @@ const Cart = () => {
                                 onClick={handleProceedToCheckout}
                                 className="w-full py-3 bg-gradient-to-r from-purple-400 to-pink-400 text-white font-bold rounded-xl shadow-md hover:from-purple-500 hover:to-pink-500 transition-all transform hover:-translate-y-0.5"
                             >
-                                Proceed to Checkout
+                                Place Order
                             </button>
 
                             <div className="text-center mt-4">

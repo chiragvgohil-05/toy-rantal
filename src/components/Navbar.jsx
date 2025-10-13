@@ -71,6 +71,13 @@ const Navbar = () => {
                                     >
                                         Profile
                                     </NavLink>
+                                    <NavLink
+                                        to="/orders"
+                                        onClick={() => setUserDropdown(false)}
+                                        className="block px-4 py-2 text-gray-700 hover:bg-pink-100"
+                                    >
+                                        Orders
+                                    </NavLink>
                                     <button
                                         onClick={handleLogout}
                                         className="w-full text-left px-4 py-2 text-gray-700 hover:bg-pink-100"

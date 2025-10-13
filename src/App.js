@@ -29,6 +29,8 @@ import AdminOrders from "./pages/admin/AdminOrders";
 import ProductCreateForm from "./pages/admin/Products/ProductCreateForm";
 import ProductEditForm from "./pages/admin/Products/ProductEditForm";
 import AdminProfile from "./pages/admin/AdminProfile";
+import Orders from "./pages/Orders";
+import SingleOrder from "./pages/SingleOrder";
 
 function AppRoutesWrapper() {
     const { isLoggedIn, isAdmin, loading } = useContext(AuthContext);
@@ -53,6 +55,8 @@ function AppRoutesWrapper() {
                 <Route path="contact" element={<ContactUs />} />
                 <Route path="shipping" element={<Shipping />} />
                 <Route path="returns" element={<Returns />} />
+                <Route path="orders" element={<Orders/>} />
+                <Route path="orders/:id" element={<SingleOrder/>} />
                 <Route path="privacy-policy" element={<PrivacyPolicy />} />
             </Route>
 
