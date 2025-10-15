@@ -1,22 +1,45 @@
-import React, { useState } from 'react';
-import {FaPencil} from "react-icons/fa6";
+import React, { useState, useEffect } from 'react';
+import { FaPencil } from "react-icons/fa6";
+import apiClient from '../../apiClient'; // your axios instance
+import toast from 'react-hot-toast';
 
 const AdminProfile = () => {
     const [adminData, setAdminData] = useState({
-        name: 'Sarah Johnson',
-        email: 'sarah.johnson@example.com',
+        name: '',
+        email: '',
         profilePicture: null,
         previewUrl: null
     });
-
+    const API_URL = process.env.REACT_APP_API_URL;
     const [isEditing, setIsEditing] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    // Fetch profile
+    const fetchProfile = async () => {
+        try {
+            const res = await apiClient.get('/me'); // GET profile
+            const user = res.data.user; // <-- get user object
+            setAdminData({
+                name: user?.name || '',
+                email: user?.email || '',
+                profilePicture: null,
+                previewUrl: user?.avatar || null
+            });
+        } catch (err) {
+            toast.error('Failed to fetch profile');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+
+    useEffect(() => {
+        fetchProfile();
+    }, []);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setAdminData(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        setAdminData(prev => ({ ...prev, [name]: value }));
     };
 
     const handleImageChange = (e) => {
@@ -34,118 +57,146 @@ const AdminProfile = () => {
         }
     };
 
-    const handleSave = () => {
-        // In a real app, this would save to an API
-        console.log('Saving data:', adminData);
-        setIsEditing(false);
-        alert('Profile updated successfully!');
+    const handleSave = async () => {
+        try {
+            // 1️⃣ Update name/email
+            await apiClient.post('/me/update', {
+                name: adminData.name,
+                email: adminData.email
+            });
+
+            // 2️⃣ Upload avatar if selected
+            if (adminData.profilePicture) {
+                const formData = new FormData();
+                formData.append('avatar', adminData.profilePicture);
+
+                const res = await apiClient.post('/upload/avatar', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+
+                setAdminData(prev => ({
+                    ...prev,
+                    previewUrl: res.data.avatar
+                }));
+            }
+
+            toast.success('Profile updated successfully!');
+            fetchProfile(); // refresh data
+            setIsEditing(false);
+        } catch (err) {
+            toast.error(err?.response?.data?.message || 'Update failed');
+        }
     };
 
     const handleCancel = () => {
-        // Reset form or revert changes
+        fetchProfile(); // reset changes
         setIsEditing(false);
     };
 
+    if (loading) return <p className="text-gray-500 py-6">Loading profile...</p>;
+
     return (
-        <div>
-            <div className="mx-auto">
-                <h1 className="text-3xl font-bold text-gray-800 mb-2 border-b pb-5">Admin Profile</h1>
+        <div className="mx-auto">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2 border-b pb-5">Admin Profile</h1>
 
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                    <div className="flex flex-col items-center mb-8">
-                        <div className="relative mb-4">
-                            {adminData.previewUrl ? (
-                                <img
-                                    src={adminData.previewUrl}
-                                    alt="Profile"
-                                    className="w-32 h-32 rounded-full object-cover border-4 border-indigo-100"
+            <div className="bg-white rounded-xl shadow-sm p-6">
+                <div className="flex flex-col items-center mb-8">
+                    <div className="relative mb-4">
+                        {adminData.previewUrl ? (
+                            <img
+                                src={
+                                    adminData.profilePicture
+                                        ? adminData.previewUrl // local file preview (base64)
+                                        : `${API_URL.replace("/api", "")}${adminData.previewUrl}` // server image
+                                }
+                                alt="Profile"
+                                className="w-32 h-32 rounded-full object-cover border-4 border-indigo-100"
+                            />
+                        ) : (
+                            <div className="w-32 h-32 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-4xl font-bold">
+                                {adminData.name?.charAt(0)}
+                            </div>
+                        )}
+
+                        {isEditing && (
+                            <label htmlFor="profile-upload" className="absolute bottom-0 right-0 bg-indigo-600 text-white p-2 rounded-full cursor-pointer shadow-md">
+                                <FaPencil />
+                                <input
+                                    id="profile-upload"
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageChange}
+                                    className="hidden"
                                 />
-                            ) : (
-                                <div className="w-32 h-32 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-4xl font-bold">
-                                    {adminData.name.charAt(0)}
-                                </div>
-                            )}
-
-                            {isEditing && (
-                                <label htmlFor="profile-upload" className="absolute bottom-0 right-0 bg-indigo-600 text-white p-2 rounded-full cursor-pointer shadow-md">
-                                    <FaPencil/>
-                                    <input
-                                        id="profile-upload"
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleImageChange}
-                                        className="hidden"
-                                    />
-                                </label>
-                            )}
-                        </div>
-
-                        <h2 className="text-xl font-semibold text-gray-800">{adminData.name}</h2>
-                        <p className="text-gray-600">{adminData.email}</p>
+                            </label>
+                        )}
                     </div>
 
-                    <div className="border-t border-gray-100 pt-6">
-                        <h3 className="text-lg font-medium text-gray-800 mb-4">Personal Information</h3>
+                    <h2 className="text-xl font-semibold text-gray-800">{adminData.name}</h2>
+                    <p className="text-gray-600">{adminData.email}</p>
+                </div>
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                                {isEditing ? (
-                                    <input
-                                        type="text"
-                                        name="name"
-                                        value={adminData.name}
-                                        onChange={handleInputChange}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                        placeholder="Enter your name"
-                                    />
-                                ) : (
-                                    <p className="px-4 py-2 bg-gray-50 rounded-lg">{adminData.name}</p>
-                                )}
-                            </div>
+                <div className="border-t border-gray-100 pt-6">
+                    <h3 className="text-lg font-medium text-gray-800 mb-4">Personal Information</h3>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                                {isEditing ? (
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        value={adminData.email}
-                                        onChange={handleInputChange}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                        placeholder="Enter your email"
-                                    />
-                                ) : (
-                                    <p className="px-4 py-2 bg-gray-50 rounded-lg">{adminData.email}</p>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="flex justify-end mt-8 space-x-3">
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
                             {isEditing ? (
-                                <>
-                                    <button
-                                        onClick={handleCancel}
-                                        className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleSave}
-                                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                                    >
-                                        Save Changes
-                                    </button>
-                                </>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    value={adminData.name}
+                                    onChange={handleInputChange}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                    placeholder="Enter your name"
+                                />
                             ) : (
-                                <button
-                                    onClick={() => setIsEditing(true)}
-                                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                                >
-                                    Edit Profile
-                                </button>
+                                <p className="px-4 py-2 bg-gray-50 rounded-lg">{adminData.name}</p>
                             )}
                         </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                            {isEditing ? (
+                                <input
+                                    type="email"
+                                    name="email"
+                                    value={adminData.email}
+                                    onChange={handleInputChange}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                    placeholder="Enter your email"
+                                />
+                            ) : (
+                                <p className="px-4 py-2 bg-gray-50 rounded-lg">{adminData.email}</p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end mt-8 space-x-3">
+                        {isEditing ? (
+                            <>
+                                <button
+                                    onClick={handleCancel}
+                                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSave}
+                                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                                >
+                                    Save Changes
+                                </button>
+                            </>
+                        ) : (
+                            <button
+                                onClick={() => setIsEditing(true)}
+                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                            >
+                                Edit Profile
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
