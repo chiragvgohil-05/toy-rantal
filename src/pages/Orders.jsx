@@ -138,7 +138,8 @@ const Orders = () => {
                                         </button>
 
                                         {order.status !== "CANCELLED" &&
-                                            order.status !== "DELIVERED" && (
+                                            order.status !== "DELIVERED" &&  order.status !== "CONFIRMED" &&
+                                            (
                                                 <button
                                                     onClick={() => openCancelModal(order)}
                                                     disabled={cancelingId === order.id}

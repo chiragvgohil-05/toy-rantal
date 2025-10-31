@@ -11,11 +11,12 @@ const AdminProducts = () => {
 
     useEffect(() => {
         const fetchProducts = async () => {
+            setLoading(true);
             try {
                 const response = await apiClient.get("/admin/products");
                 const data = response.data || [];
                 console.log("Fetched products:", data);
-                // Map API response to AdminProductCard structure
+
                 const mappedProducts = data.map(prod => ({
                     id: prod.id,
                     title: prod.title,
@@ -23,9 +24,10 @@ const AdminProducts = () => {
                     category: prod.category_name || "Unknown",
                     originalPrice: prod.actual_price || 0,
                     discountedPrice: prod.discount_price || 0,
-                    discountPercentage: prod.actual_price && prod.discount_price
-                        ? Math.round((1 - prod.discount_price / prod.actual_price) * 100)
-                        : 0,
+                    discountPercentage:
+                        prod.actual_price && prod.discount_price
+                            ? Math.round((1 - prod.discount_price / prod.actual_price) * 100)
+                            : 0,
                     images: Array.isArray(prod.images)
                         ? prod.images.map(url => ({ url, alt: prod.title }))
                         : [],
@@ -52,7 +54,7 @@ const AdminProducts = () => {
     };
 
     const handleDeleteProduct = async (product) => {
-               try {
+        try {
             await apiClient.delete(`/admin/products/${product.id}`);
             setProductList(prev => prev.filter(p => p.id !== product.id));
             toast.success("Product deleted successfully");
@@ -62,21 +64,43 @@ const AdminProducts = () => {
         }
     };
 
-    if (loading) return <div className="text-center py-12">Loading products...</div>;
+    // 🔸 Skeleton Card Component
+    const ProductSkeleton = () => (
+        <div className="animate-pulse bg-white rounded-xl shadow-md overflow-hidden">
+            <div className="h-48 bg-gray-200"></div>
+            <div className="p-4 space-y-3">
+                <div className="h-5 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-4 bg-gray-200 rounded w-full"></div>
+                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                <div className="flex justify-between items-center mt-4">
+                    <div className="h-6 bg-gray-200 rounded w-16"></div>
+                    <div className="h-8 bg-gray-200 rounded w-20"></div>
+                </div>
+            </div>
+        </div>
+    );
 
     return (
         <div>
+            {/* Header */}
             <div className="flex justify-between items-center mb-6 border-b pb-6">
                 <h2 className="text-2xl font-bold text-gray-700">Products Management</h2>
                 <NavLink
                     to="/admin/products/create"
-                    className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 font-bold text-white rounded-lg hover:bg-purple-700 transition"
+                    className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 font-bold text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition"
                 >
                     Add New Product
                 </NavLink>
             </div>
 
-            {productList.length > 0 ? (
+            {/* Loading State */}
+            {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <ProductSkeleton key={i} />
+                    ))}
+                </div>
+            ) : productList.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6">
                     {productList.map(product => (
                         <AdminProductCard

@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 const AdminDashboard = () => {
     const [users, setUsers] = useState([]);
     const [loadingUsers, setLoadingUsers] = useState(true);
+    const [loadingStats, setLoadingStats] = useState(true);
     const [stats, setStats] = useState({ totalProducts: 0, totalOrders: 0, totalUsers: 0 });
     const [deletingId, setDeletingId] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -24,13 +25,16 @@ const AdminDashboard = () => {
         }
     };
 
-    // Fetch dashboard stats
+    // Fetch stats
     const fetchStats = async () => {
+        setLoadingStats(true);
         try {
             const res = await apiClient.get("/admin/stats");
             setStats(res.data);
         } catch (err) {
             toast.error("Failed to fetch stats");
+        } finally {
+            setLoadingStats(false);
         }
     };
 
@@ -39,13 +43,11 @@ const AdminDashboard = () => {
         fetchStats();
     }, []);
 
-    // Open delete modal
+    // Modal handlers
     const openDeleteModal = (user) => {
         setSelectedUser(user);
         setIsModalOpen(true);
     };
-
-    // Close delete modal
     const closeDeleteModal = () => {
         setSelectedUser(null);
         setIsModalOpen(false);
@@ -58,8 +60,8 @@ const AdminDashboard = () => {
         try {
             await apiClient.delete(`/admin/users/${selectedUser.id}`);
             toast.success(`User ${selectedUser.name} deleted`);
-            setUsers(prev => prev.filter(u => u.id !== selectedUser.id));
-            setStats(prev => ({ ...prev, totalUsers: prev.totalUsers - 1 }));
+            setUsers((prev) => prev.filter((u) => u.id !== selectedUser.id));
+            setStats((prev) => ({ ...prev, totalUsers: prev.totalUsers - 1 }));
         } catch (err) {
             toast.error(err?.response?.data?.message || "Delete failed");
         } finally {
@@ -67,6 +69,27 @@ const AdminDashboard = () => {
             closeDeleteModal();
         }
     };
+
+    // Skeleton components
+    const StatSkeleton = () => (
+        <div className="bg-white p-6 rounded-2xl shadow-md animate-pulse flex items-center gap-4">
+            <div className="bg-gray-200 w-12 h-12 rounded-xl"></div>
+            <div className="flex-1">
+                <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                <div className="h-6 bg-gray-300 rounded w-16"></div>
+            </div>
+        </div>
+    );
+
+    const UserRowSkeleton = () => (
+        <tr className="animate-pulse">
+            <td className="px-6 py-3"><div className="h-4 bg-gray-200 rounded w-8"></div></td>
+            <td className="px-6 py-3"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
+            <td className="px-6 py-3"><div className="h-4 bg-gray-200 rounded w-32"></div></td>
+            <td className="px-6 py-3"><div className="h-4 bg-gray-200 rounded w-20"></div></td>
+            <td className="px-6 py-3"><div className="h-6 bg-gray-200 rounded w-16"></div></td>
+        </tr>
+    );
 
     return (
         <div className="space-y-10">
@@ -78,56 +101,65 @@ const AdminDashboard = () => {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition-all flex items-center gap-4">
-                    <div className="bg-purple-100 p-4 rounded-xl">
-                        <FaBoxOpen className="text-purple-600 text-3xl" />
-                    </div>
-                    <div>
-                        <p className="text-gray-500 text-sm">Total Products</p>
-                        <p className="text-2xl font-bold text-gray-800">{stats.totalProducts}</p>
-                    </div>
-                </div>
+                {loadingStats ? (
+                    <>
+                        <StatSkeleton />
+                        <StatSkeleton />
+                        <StatSkeleton />
+                    </>
+                ) : (
+                    <>
+                        <div className="bg-white p-6 rounded-2xl shadow-md flex items-center gap-4">
+                            <div className="bg-purple-100 p-4 rounded-xl">
+                                <FaBoxOpen className="text-purple-600 text-3xl" />
+                            </div>
+                            <div>
+                                <p className="text-gray-500 text-sm">Total Products</p>
+                                <p className="text-2xl font-bold text-gray-800">{stats.totalProducts}</p>
+                            </div>
+                        </div>
 
-                <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition-all flex items-center gap-4">
-                    <div className="bg-pink-100 p-4 rounded-xl">
-                        <FaShoppingCart className="text-pink-600 text-3xl" />
-                    </div>
-                    <div>
-                        <p className="text-gray-500 text-sm">Total Orders</p>
-                        <p className="text-2xl font-bold text-gray-800">{stats.totalOrders}</p>
-                    </div>
-                </div>
+                        <div className="bg-white p-6 rounded-2xl shadow-md flex items-center gap-4">
+                            <div className="bg-pink-100 p-4 rounded-xl">
+                                <FaShoppingCart className="text-pink-600 text-3xl" />
+                            </div>
+                            <div>
+                                <p className="text-gray-500 text-sm">Total Orders</p>
+                                <p className="text-2xl font-bold text-gray-800">{stats.totalOrders}</p>
+                            </div>
+                        </div>
 
-                <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition-all flex items-center gap-4">
-                    <div className="bg-yellow-100 p-4 rounded-xl">
-                        <FaUsers className="text-yellow-600 text-3xl" />
-                    </div>
-                    <div>
-                        <p className="text-gray-500 text-sm">Total Users</p>
-                        <p className="text-2xl font-bold text-gray-800">{stats.totalUsers}</p>
-                    </div>
-                </div>
+                        <div className="bg-white p-6 rounded-2xl shadow-md flex items-center gap-4">
+                            <div className="bg-yellow-100 p-4 rounded-xl">
+                                <FaUsers className="text-yellow-600 text-3xl" />
+                            </div>
+                            <div>
+                                <p className="text-gray-500 text-sm">Total Users</p>
+                                <p className="text-2xl font-bold text-gray-800">{stats.totalUsers}</p>
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
 
-            {/* Users Management Section */}
+            {/* Users Management */}
             <div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-4">Users Management</h2>
-                {loadingUsers ? (
-                    <p className="text-gray-500 py-6">Loading users...</p>
-                ) : (
-                    <div className="bg-white rounded-2xl shadow-md overflow-hidden">
-                        <table className="min-w-full table-auto">
-                            <thead className="bg-gradient-to-r from-yellow-100 to-yellow-200 text-gray-700">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-sm font-semibold">ID</th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold">Name</th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold">Email</th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold">Role</th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold">Actions</th>
-                            </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200">
-                            {users.map((u) => (
+                <div className="bg-white rounded-2xl shadow-md overflow-hidden">
+                    <table className="min-w-full table-auto">
+                        <thead className="bg-gradient-to-r from-yellow-100 to-yellow-200 text-gray-700">
+                        <tr>
+                            <th className="px-6 py-3 text-left text-sm font-semibold">ID</th>
+                            <th className="px-6 py-3 text-left text-sm font-semibold">Name</th>
+                            <th className="px-6 py-3 text-left text-sm font-semibold">Email</th>
+                            <th className="px-6 py-3 text-left text-sm font-semibold">Role</th>
+                            <th className="px-6 py-3 text-left text-sm font-semibold">Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                        {loadingUsers
+                            ? Array.from({ length: 5 }).map((_, i) => <UserRowSkeleton key={i} />)
+                            : users.map((u) => (
                                 <tr key={u.id} className="hover:bg-yellow-50 transition-all">
                                     <td className="px-6 py-3 text-sm text-gray-700">{u.id}</td>
                                     <td className="px-6 py-3 text-sm font-medium text-gray-800">{u.name}</td>
@@ -146,25 +178,26 @@ const AdminDashboard = () => {
                                     <td>
                                         <button
                                             onClick={() => openDeleteModal(u)}
-                                            disabled={u.role === "admin" || deletingId === u.id} // Disable if Admin
+                                            disabled={u.role === "admin" || deletingId === u.id}
                                             className={`px-3 py-1 rounded flex items-center gap-1 
-            ${u.role === "admin"
-                                                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                                : "bg-red-500 text-white hover:bg-red-600"} 
-            disabled:opacity-50`}
+                                                    ${
+                                                u.role === "admin"
+                                                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                                    : "bg-red-500 text-white hover:bg-red-600"
+                                            } 
+                                                    disabled:opacity-50`}
                                         >
                                             <FaTrash /> Delete
                                         </button>
                                     </td>
                                 </tr>
                             ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            {/* Confirmation Modal */}
+            {/* Delete Confirmation Modal */}
             {isModalOpen && selectedUser && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
                     <div className="bg-white rounded-2xl p-6 w-96 shadow-lg">

@@ -96,7 +96,7 @@ const SingleOrder = () => {
                 <p><strong>Placed At:</strong> {new Date(order.placed_at).toLocaleString()}</p>
 
                 {/* ✅ Cancel Button (only show if not cancelled or delivered) */}
-                {order.status !== "CANCELLED" && order.status !== "DELIVERED" && (
+                {order.status !== "CANCELLED" && order.status !== "DELIVERED"  && order.status !== "CONFIRMED" && (
                     <button
                         onClick={() => setShowCancelConfirm(true)}
                         disabled={canceling}

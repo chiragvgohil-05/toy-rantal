@@ -1,37 +1,29 @@
 // src/pages/AboutUs.jsx
-import React from "react";
+import React, { useEffect, useState } from "react";
+import apiClient from "../apiClient"; // <-- Make sure this points to your axios instance
 
 const AboutUs = () => {
-    const teamMembers = [
-        {
-            id: 1,
-            name: "Sarah Johnson",
-            role: "Founder & CEO",
-            image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=300&q=80",
-            description: "With 10+ years in the toy industry, Sarah founded PlayfulRent to make quality toys accessible to all families."
-        },
-        {
-            id: 2,
-            name: "Michael Chen",
-            role: "Operations Manager",
-            image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=300&q=80",
-            description: "Michael ensures our rental process is smooth and efficient from order to delivery and back."
-        },
-        {
-            id: 3,
-            name: "Emma Rodriguez",
-            role: "Toy Curator",
-            image: "https://images.unsplash.com/photo-1551836026-d5c8c5ab235e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=300&q=80",
-            description: "Emma carefully selects and tests all toys to ensure they're safe, educational, and fun for children."
-        },
-        {
-            id: 4,
-            name: "David Kim",
-            role: "Customer Experience",
-            image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=300&q=80",
-            description: "David and his team are here to help you with any questions about your rentals or account."
-        }
-    ];
+    const [productCount, setProductCount] = useState(0);
+
+    useEffect(() => {
+        const fetchProductCount = async () => {
+            try {
+                const response = await apiClient.get("/products"); // <-- your actual endpoint
+                if (response.data && Array.isArray(response.data)) {
+                    setProductCount(response.data.length);
+                } else if (response.data?.total) {
+                    // if your API returns paginated data
+                    setProductCount(response.data.total);
+                } else {
+                    console.warn("Unexpected product response:", response.data);
+                }
+            } catch (error) {
+                console.error("Error fetching products:", error);
+            }
+        };
+
+        fetchProductCount();
+    }, []);
 
     const values = [
         {
@@ -58,9 +50,9 @@ const AboutUs = () => {
 
     const stats = [
         { number: "10,000+", label: "Happy Kids" },
-        { number: "5,000+", label: "Quality Toys" },
-        { number: "50+", label: "Cities Served" },
-        { number: "98%", label: "Satisfaction Rate" }
+        { number: productCount > 0 ? `${productCount}+` : "...", label: "Quality Toys" },
+        { number: "1", label: "Cities Served" },
+        { number: "100%", label: "Satisfaction Rate" }
     ];
 
     return (
@@ -77,6 +69,7 @@ const AboutUs = () => {
 
             {/* Main Content */}
             <div className="container mx-auto px-4 py-12 max-w-6xl">
+
                 {/* Introduction */}
                 <section className="mb-16">
                     <div className="bg-white rounded-2xl shadow-md p-8 border border-pink-200">
@@ -98,7 +91,7 @@ const AboutUs = () => {
                             </div>
                             <div className="flex justify-center">
                                 <img
-                                    src="https://images.unsplash.com/photo-1534452203293-494d7ddbf7e0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=600&q=80"
+                                    src="https://images.unsplash.com/photo-1534452203293-494d7ddbf7e0?auto=format&fit=crop&w=600&q=80"
                                     alt="Children playing with toys"
                                     className="rounded-xl shadow-lg max-w-full h-auto"
                                 />
@@ -138,28 +131,7 @@ const AboutUs = () => {
                     </div>
                 </section>
 
-                {/* Team Section */}
-                <section className="mb-16">
-                    <div className="bg-white rounded-2xl shadow-md p-8 border border-pink-200">
-                        <h2 className="text-3xl font-bold text-purple-700 mb-8 text-center">Meet Our Team</h2>
-                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                            {teamMembers.map(member => (
-                                <div key={member.id} className="text-center">
-                                    <img
-                                        src={member.image}
-                                        alt={member.name}
-                                        className="w-32 h-32 rounded-full mx-auto mb-4 object-cover border-4 border-purple-200"
-                                    />
-                                    <h3 className="text-xl font-semibold text-gray-800">{member.name}</h3>
-                                    <p className="text-purple-600 mb-2">{member.role}</p>
-                                    <p className="text-gray-600 text-sm">{member.description}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </section>
-
-                {/* Process Section */}
+                {/* How It Works Section */}
                 <section>
                     <div className="bg-white rounded-2xl shadow-md p-8 border border-pink-200">
                         <h2 className="text-3xl font-bold text-purple-700 mb-8 text-center">How It Works</h2>

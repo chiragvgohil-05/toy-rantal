@@ -88,7 +88,49 @@ const AdminOrders = () => {
 
     const handleModalCancel = () => setModal({ isOpen: false, id: null, action: null });
 
-    if (loading) return <p className="text-center py-6">Loading orders...</p>;
+    // 🔸 Table Skeleton Component
+    const OrdersSkeleton = () => (
+        <div className="overflow-x-auto bg-white rounded-2xl shadow-md animate-pulse">
+            <table className="min-w-full table-auto">
+                <thead className="bg-pink-100 text-gray-700">
+                <tr>
+                    <th className="px-6 py-3 text-left">Order ID</th>
+                    <th className="px-6 py-3 text-left">Customer</th>
+                    <th className="px-6 py-3 text-left">Total (₹)</th>
+                    <th className="px-6 py-3 text-left">Status</th>
+                    <th className="px-6 py-3 text-left">Actions</th>
+                </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                {Array.from({ length: 6 }).map((_, i) => (
+                    <tr key={i}>
+                        <td className="px-6 py-4">
+                            <div className="h-4 bg-gray-200 rounded w-16"></div>
+                        </td>
+                        <td className="px-6 py-4">
+                            <div className="space-y-2">
+                                <div className="h-4 bg-gray-200 rounded w-24"></div>
+                                <div className="h-3 bg-gray-200 rounded w-32"></div>
+                            </div>
+                        </td>
+                        <td className="px-6 py-4">
+                            <div className="h-4 bg-gray-200 rounded w-12"></div>
+                        </td>
+                        <td className="px-6 py-4">
+                            <div className="h-4 bg-gray-200 rounded w-20"></div>
+                        </td>
+                        <td className="px-6 py-4">
+                            <div className="flex gap-2">
+                                <div className="h-8 bg-gray-200 rounded w-20"></div>
+                                <div className="h-8 bg-gray-200 rounded w-20"></div>
+                            </div>
+                        </td>
+                    </tr>
+                ))}
+                </tbody>
+            </table>
+        </div>
+    );
 
     return (
         <div>
@@ -105,47 +147,58 @@ const AdminOrders = () => {
                 </button>
             )}
 
-            <div className="overflow-x-auto bg-white rounded-2xl shadow-md">
-                <table className="min-w-full table-auto">
-                    <thead className="bg-pink-100 text-gray-700">
-                    <tr>
-                        <th className="px-6 py-3 text-left">Order ID</th>
-                        <th className="px-6 py-3 text-left">Customer</th>
-                        <th className="px-6 py-3 text-left">Total (₹)</th>
-                        <th className="px-6 py-3 text-left">Status</th>
-                        <th className="px-6 py-3 text-left">Actions</th>
-                    </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                    {orders.map((o) => (
-                        <tr key={o.id} className="hover:bg-pink-50">
-                            <td className="px-6 py-3">{o.id}</td>
-                            <td className="px-6 py-3">{o.user_id}</td>
-                            <td className="px-6 py-3">{o.total_due}</td>
-                            <td className="px-6 py-3">{o.status}</td>
-                            <td className="px-6 py-3 flex gap-2">
-                                {o.status === "PLACED" && (
-                                    <button
-                                        onClick={() => openModal(o.id, "confirm")}
-                                        disabled={confirmingId === o.id}
-                                        className="px-4 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
-                                    >
-                                        {confirmingId === o.id ? "Confirming..." : "Confirm"}
-                                    </button>
-                                )}
-                                <button
-                                    onClick={() => openModal(o.id, "delete")}
-                                    disabled={deletingId === o.id}
-                                    className="px-4 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
-                                >
-                                    {deletingId === o.id ? "Deleting..." : "Delete"}
-                                </button>
-                            </td>
+            {loading ? (
+                <OrdersSkeleton />
+            ) : (
+                <div className="overflow-x-auto bg-white rounded-2xl shadow-md">
+                    <table className="min-w-full table-auto">
+                        <thead className="bg-pink-100 text-gray-700">
+                        <tr>
+                            <th className="px-6 py-3 text-left">Order ID</th>
+                            <th className="px-6 py-3 text-left">Customer</th>
+                            <th className="px-6 py-3 text-left">Total (₹)</th>
+                            <th className="px-6 py-3 text-left">Status</th>
+                            <th className="px-6 py-3 text-left">Actions</th>
                         </tr>
-                    ))}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                        {orders.map((o) => (
+                            <tr key={o.id} className="hover:bg-pink-50">
+                                <td className="px-6 py-3">{o.id}</td>
+                                <td className="px-6 py-3">
+                                    <div>
+                                        <p className="font-medium">{o.user_name}</p>
+                                        <p className="text-sm text-gray-500">{o.user_email}</p>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-3">{o.total_due}</td>
+                                <td className="px-6 py-3">{o.status}</td>
+                                <td className="px-6 py-3 flex gap-2">
+                                    {o.status === "PLACED" && (
+                                        <button
+                                            onClick={() => openModal(o.id, "confirm")}
+                                            disabled={confirmingId === o.id}
+                                            className="px-4 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
+                                        >
+                                            {confirmingId === o.id
+                                                ? "Confirming..."
+                                                : "Confirm"}
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => openModal(o.id, "delete")}
+                                        disabled={deletingId === o.id}
+                                        className="px-4 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
+                                    >
+                                        {deletingId === o.id ? "Deleting..." : "Delete"}
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
 
             {/* Confirmation Modal */}
             <ConfirmModal

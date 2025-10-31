@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaPencil } from "react-icons/fa6";
-import apiClient from '../../apiClient'; // your axios instance
+import apiClient from '../../apiClient';
 import toast from 'react-hot-toast';
 
 const AdminProfile = () => {
@@ -17,8 +17,8 @@ const AdminProfile = () => {
     // Fetch profile
     const fetchProfile = async () => {
         try {
-            const res = await apiClient.get('/me'); // GET profile
-            const user = res.data.user; // <-- get user object
+            const res = await apiClient.get('/me');
+            const user = res.data.user;
             setAdminData({
                 name: user?.name || '',
                 email: user?.email || '',
@@ -31,7 +31,6 @@ const AdminProfile = () => {
             setLoading(false);
         }
     };
-
 
     useEffect(() => {
         fetchProfile();
@@ -59,13 +58,11 @@ const AdminProfile = () => {
 
     const handleSave = async () => {
         try {
-            // 1️⃣ Update name/email
             await apiClient.post('/me/update', {
                 name: adminData.name,
                 email: adminData.email
             });
 
-            // 2️⃣ Upload avatar if selected
             if (adminData.profilePicture) {
                 const formData = new FormData();
                 formData.append('avatar', adminData.profilePicture);
@@ -81,7 +78,7 @@ const AdminProfile = () => {
             }
 
             toast.success('Profile updated successfully!');
-            fetchProfile(); // refresh data
+            fetchProfile();
             setIsEditing(false);
         } catch (err) {
             toast.error(err?.response?.data?.message || 'Update failed');
@@ -89,15 +86,55 @@ const AdminProfile = () => {
     };
 
     const handleCancel = () => {
-        fetchProfile(); // reset changes
+        fetchProfile();
         setIsEditing(false);
     };
 
-    if (loading) return <p className="text-gray-500 py-6">Loading profile...</p>;
+    // 🩶 Skeleton Loader Component
+    const ProfileSkeleton = () => (
+        <div className="bg-white rounded-xl shadow-sm p-6 animate-pulse">
+            <div className="flex flex-col items-center mb-8">
+                <div className="w-32 h-32 bg-gray-200 rounded-full mb-4"></div>
+                <div className="h-5 bg-gray-200 rounded w-40 mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-32"></div>
+            </div>
+
+            <div className="border-t border-gray-100 pt-6">
+                <div className="space-y-4">
+                    <div>
+                        <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                        <div className="h-10 bg-gray-200 rounded w-full"></div>
+                    </div>
+
+                    <div>
+                        <div className="h-4 bg-gray-200 rounded w-28 mb-2"></div>
+                        <div className="h-10 bg-gray-200 rounded w-full"></div>
+                    </div>
+                </div>
+
+                <div className="flex justify-end mt-8">
+                    <div className="h-10 bg-gray-200 rounded w-32"></div>
+                </div>
+            </div>
+        </div>
+    );
+
+    if (loading) {
+        return (
+            <div className="mx-auto">
+                <h1 className="text-3xl font-bold text-gray-800 mb-2 border-b pb-5">
+                    Admin Profile
+                </h1>
+                <ProfileSkeleton />
+            </div>
+        );
+    }
 
     return (
         <div className="mx-auto">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2 border-b pb-5">Admin Profile</h1>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2 border-b pb-5">
+                Admin Profile
+            </h1>
 
             <div className="bg-white rounded-xl shadow-sm p-6">
                 <div className="flex flex-col items-center mb-8">
@@ -106,8 +143,8 @@ const AdminProfile = () => {
                             <img
                                 src={
                                     adminData.profilePicture
-                                        ? adminData.previewUrl // local file preview (base64)
-                                        : `${API_URL.replace("/api", "")}${adminData.previewUrl}` // server image
+                                        ? adminData.previewUrl
+                                        : `${API_URL.replace("/api", "")}${adminData.previewUrl}`
                                 }
                                 alt="Profile"
                                 className="w-32 h-32 rounded-full object-cover border-4 border-indigo-100"
@@ -119,7 +156,10 @@ const AdminProfile = () => {
                         )}
 
                         {isEditing && (
-                            <label htmlFor="profile-upload" className="absolute bottom-0 right-0 bg-indigo-600 text-white p-2 rounded-full cursor-pointer shadow-md">
+                            <label
+                                htmlFor="profile-upload"
+                                className="absolute bottom-0 right-0 bg-indigo-600 text-white p-2 rounded-full cursor-pointer shadow-md"
+                            >
                                 <FaPencil />
                                 <input
                                     id="profile-upload"
