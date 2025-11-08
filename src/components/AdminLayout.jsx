@@ -11,14 +11,28 @@ import {
 } from "react-icons/fa";
 import Logo from "../assets/logo2.png";
 import { AuthContext } from "../context/AuthContext";
+import {getProfile} from "../api";
 
 const AdminLayout = () => {
     const { logout } = useContext(AuthContext);
     const navigate = useNavigate();
-
+    const [user, setUser] = useState(null);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+    const API_URL = process.env.REACT_APP_API_URL;
 
+    useEffect(() => {
+        async function loadUser() {
+            try {
+                const res = await getProfile(); // GET /api/me
+                if (res?.data?.user) setUser(res.data.user);
+            } catch (err) {
+                setUser(null);
+                localStorage.removeItem("token");
+            }
+        }
+        loadUser();
+    }, []);
     // Handle responsiveness
     useEffect(() => {
         const handleResize = () => {
@@ -161,10 +175,12 @@ const AdminLayout = () => {
                         </h1>
                     </div>
                     <div className="flex items-center gap-3">
-                        <span className="text-gray-600 text-sm hidden sm:block">Welcome, Admin!</span>
+                        <span className="text-gray-600 text-sm hidden sm:block">Welcome, {user?.name ? user?.name : "Admin"}!</span>
                         <NavLink to="/admin/profile" className="flex items-center">
                             <img
-                                src="https://picsum.photos/40"
+                                src={user?.avatar ?
+                                    `${API_URL.replace("/api", "")}${user?.avatar}` : 'https://picsum.photos/40'
+                                }
                                 alt="admin"
                                 className="w-10 h-10 rounded-full object-cover border-2 border-purple-200"
                             />

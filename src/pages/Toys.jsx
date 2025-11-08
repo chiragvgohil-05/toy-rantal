@@ -178,7 +178,7 @@ const Toys = () => {
                     </div>
 
                     {/* Product Grid */}
-                    <div className="pr-2 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 pb-6">
+                    <div className={`pr-2 flex flex-wrap gap-6 pb-6 ${filteredProducts.length > 0 ? '' : 'justify-center'}`}>
                         {filteredProducts.length > 0 ? (
                             filteredProducts.map((product) => (
                                 <div
