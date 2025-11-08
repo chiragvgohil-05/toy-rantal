@@ -1,8 +1,9 @@
 // src/components/ProductCard.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../apiClient";
 import toast from "react-hot-toast";
+import { CartContext } from "../context/CartContext"; // ✅ Import context
 
 // Simple global store for managing active cards
 let activeCardId = null;
@@ -42,6 +43,7 @@ const ProductCard = ({
                          overlayTitle = "Choose Rental Option",
                          closeButtonText = "Close",
                      }) => {
+    const { fetchCartCount } = useContext(CartContext); // ✅ Use context
     const [id] = useState(() => propId || autoId++);
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -50,7 +52,7 @@ const ProductCard = ({
 
     // Set default start date to today
     useEffect(() => {
-        const today = new Date().toISOString().split('T')[0];
+        const today = new Date().toISOString().split("T")[0];
         setStartDate(today);
     }, []);
 
@@ -86,6 +88,9 @@ const ProductCard = ({
             if (response.data.success) {
                 toast.success(`Added ${title} (${option.days} days) to cart!`);
 
+                // ✅ Refresh cart count
+                await fetchCartCount();
+
                 if (onOptionSelect) {
                     const selectionInfo = {
                         productId: id,
@@ -97,7 +102,10 @@ const ProductCard = ({
 
                 setGlobalActiveCard(null);
             } else {
-                toast.error("Failed to add item to cart: " + (response.data.message || "Unknown error"));
+                toast.error(
+                    "Failed to add item to cart: " +
+                    (response.data.message || "Unknown error")
+                );
             }
         } catch (error) {
             console.error("Error adding to cart:", error);
@@ -111,8 +119,8 @@ const ProductCard = ({
         }
     };
 
-    // Calculate discount percentage if not provided
-    const calculatedDiscount = discountPercentage ||
+    const calculatedDiscount =
+        discountPercentage ||
         Math.round(((originalPrice - discountedPrice) / originalPrice) * 100);
 
     const navigateToDetails = () => {
@@ -120,7 +128,9 @@ const ProductCard = ({
     };
 
     return (
-        <div className={`relative w-80 bg-white shadow-lg rounded-2xl overflow-hidden border border-gray-200 ${className}`}>
+        <div
+            className={`relative w-80 bg-white shadow-lg rounded-2xl overflow-hidden border border-gray-200 ${className}`}
+        >
             {/* Discount Badge */}
             {showDiscountBadge && calculatedDiscount > 0 && (
                 <div className="absolute top-3 right-3 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md z-10">
@@ -134,37 +144,43 @@ const ProductCard = ({
                 alt={title}
                 className="w-full h-56 object-cover cursor-pointer"
                 onError={(e) => {
-                    e.target.src = "https://via.placeholder.com/300x200?text=Product+Image";
+                    e.target.src =
+                        "https://via.placeholder.com/300x200?text=Product+Image";
                 }}
                 onClick={navigateToDetails}
             />
 
             {/* Content */}
             <div className="p-4">
-                <h2 className="text-xl font-semibold text-gray-800 cursor-pointer" onClick={navigateToDetails}>{title}</h2>
-                <p className="text-gray-600 text-sm mt-2 line-clamp-2">
-                    {description}
-                </p>
+                <h2
+                    className="text-xl font-semibold text-gray-800 cursor-pointer"
+                    onClick={navigateToDetails}
+                >
+                    {title}
+                </h2>
+                <p className="text-gray-600 text-sm mt-2 line-clamp-2">{description}</p>
 
-                {/* Price with original strikethrough */}
                 <div className="mt-2 flex items-center gap-2">
-                    <span className="text-lg font-bold text-blue-600">₹{discountedPrice}</span>
+                    <span className="text-lg font-bold text-blue-600">
+                        ₹{discountedPrice}
+                    </span>
                     {originalPrice > discountedPrice && (
-                        <span className="text-sm text-gray-500 line-through">₹{originalPrice}</span>
+                        <span className="text-sm text-gray-500 line-through">
+                            ₹{originalPrice}
+                        </span>
                     )}
                 </div>
 
-                {/* Add to Cart Button */}
                 <button
                     onClick={toggleOverlay}
                     disabled={loading}
                     className={`w-full mt-4 py-2 rounded-lg font-medium transition ${
                         loading
-                            ? 'bg-gray-400 cursor-not-allowed'
-                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                            ? "bg-gray-400 cursor-not-allowed"
+                            : "bg-blue-600 text-white hover:bg-blue-700"
                     }`}
                 >
-                    {loading ? "Adding..." : (isOpen ? "Hide Options" : buttonText)}
+                    {loading ? "Adding..." : isOpen ? "Hide Options" : buttonText}
                 </button>
             </div>
 
@@ -191,7 +207,7 @@ const ProductCard = ({
                                 type="date"
                                 value={startDate}
                                 onChange={(e) => setStartDate(e.target.value)}
-                                min={new Date().toISOString().split('T')[0]}
+                                min={new Date().toISOString().split("T")[0]}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
                         </div>
@@ -204,15 +220,17 @@ const ProductCard = ({
                                 >
                                     <div className="flex-1">
                                         <div className="font-medium">{option.days} Days</div>
-                                        <div className="text-blue-600 font-semibold">₹{option.price}</div>
+                                        <div className="text-blue-600 font-semibold">
+                                            ₹{option.price}
+                                        </div>
                                     </div>
                                     <button
                                         onClick={() => handleAddToCart(option, index)}
                                         disabled={loading}
                                         className={`px-4 py-2 rounded-lg font-medium transition ${
                                             loading
-                                                ? 'bg-gray-400 cursor-not-allowed'
-                                                : 'bg-green-500 text-white hover:bg-green-600'
+                                                ? "bg-gray-400 cursor-not-allowed"
+                                                : "bg-green-500 text-white hover:bg-green-600"
                                         }`}
                                     >
                                         {loading ? "..." : "Add"}

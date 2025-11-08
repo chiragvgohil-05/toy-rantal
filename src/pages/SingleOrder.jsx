@@ -93,7 +93,17 @@ const SingleOrder = () => {
                 <p><strong>Status:</strong> {order.status}</p>
                 <p><strong>Payment Mode:</strong> COD</p>
                 <p><strong>Total Due:</strong> ₹{order.total_due}</p>
-                <p><strong>Placed At:</strong> {new Date(order.placed_at).toLocaleString()}</p>
+                <p className="flex gap-1 items-center"><strong>Placed At:</strong> <p className="uppercase">
+                    {new Date(order.placed_at).toLocaleString("en-GB", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        hour12: true,
+                    })}
+                </p></p>
 
                 {/* ✅ Cancel Button (only show if not cancelled or delivered) */}
                 {order.status !== "CANCELLED" && order.status !== "DELIVERED"  && order.status !== "CONFIRMED" && (
@@ -133,10 +143,10 @@ const SingleOrder = () => {
                                     Duration: {item.duration_days} days
                                 </p>
                                 <p className="text-gray-600 text-sm">
-                                    Start: {new Date(item.start_date).toLocaleDateString()}
+                                    Start: {new Date(item.start_date).toLocaleDateString("en-GB")}
                                 </p>
                                 <p className="text-gray-600 text-sm">
-                                    End: {new Date(item.end_date).toLocaleDateString()}
+                                    End: {new Date(item.end_date).toLocaleDateString("en-GB")}
                                 </p>
                                 <p className="font-semibold text-gray-800 mt-1">
                                     ₹{item.item_price}

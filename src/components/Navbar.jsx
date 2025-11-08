@@ -4,12 +4,14 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { FaBars, FaTimes, FaShoppingCart, FaUser } from "react-icons/fa";
 import Logo from "../assets/logo2.png";
 import { AuthContext } from "../context/AuthContext";
+import { CartContext } from "../context/CartContext";
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false); // mobile menu
     const [userDropdown, setUserDropdown] = useState(false); // user dropdown
     const dropdownRef = useRef(null);
     const navigate = useNavigate();
+    const { cartCount, fetchCartCount } = useContext(CartContext);
 
     const { isLoggedIn, logout, user } = useContext(AuthContext);
 
@@ -91,9 +93,11 @@ const Navbar = () => {
 
                     <NavLink to="/cart" className="relative text-gray-600 hover:text-pink-600">
                         <FaShoppingCart size={22} />
-                        <span className="absolute -top-2 -right-2 bg-pink-600 text-white text-xs rounded-full px-1">
-                            2
-                        </span>
+                        {cartCount > 0 && (
+                            <span className="absolute -top-2 -right-2 bg-pink-600 text-white text-xs rounded-full px-1.5">
+                              {cartCount}
+                            </span>
+                        )}
                     </NavLink>
 
                     {/* Mobile Menu Button */}

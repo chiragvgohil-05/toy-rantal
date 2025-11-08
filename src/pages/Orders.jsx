@@ -112,7 +112,7 @@ const Orders = () => {
                                         </p>
                                         <p className="text-gray-600 text-sm">
                                             Placed on:{" "}
-                                            {new Date(order.placed_at).toLocaleDateString()}
+                                            {new Date(order.placed_at).toLocaleDateString("en-GB")}
                                         </p>
                                         <p className="text-gray-800 font-semibold mt-1">
                                             Total: ₹{order.total_due}

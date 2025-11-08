@@ -1,22 +1,25 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import apiClient from "../apiClient";
+import toast from "react-hot-toast";
+import { CartContext } from "../context/CartContext"; // ✅ Import context
 
 const ProductDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { fetchCartCount } = useContext(CartContext); // ✅ Use the context
+
     const [product, setProduct] = useState(null);
     const [selectedPlan, setSelectedPlan] = useState(null);
-    const [selectedOptionIndex, setSelectedOptionIndex] = useState(null); // Track index
+    const [selectedOptionIndex, setSelectedOptionIndex] = useState(null);
     const [loading, setLoading] = useState(true);
     const [startDate, setStartDate] = useState("");
 
-    // Fetch product and rental options
+    // ✅ Fetch product details
     useEffect(() => {
         const fetchProductData = async () => {
             try {
-                const productResponse = await apiClient.get(`/products/${id}`);
-                const p = productResponse.data;
+                const { data: p } = await apiClient.get(`/products/${id}`);
 
                 const discountPercentage =
                     p.actual_price && p.discount_price
@@ -31,13 +34,14 @@ const ProductDetail = () => {
                     originalPrice: p.actual_price,
                     discountedPrice: p.discount_price,
                     discountPercentage,
-                    plans: p.rentalOptions.length > 0
-                        ? p.rentalOptions
-                        : [
-                            { days: 7, price: 500 },
-                            { days: 15, price: 900 },
-                            { days: 30, price: 1500 },
-                        ],
+                    plans:
+                        p.rentalOptions.length > 0
+                            ? p.rentalOptions
+                            : [
+                                { days: 7, price: 500 },
+                                { days: 15, price: 900 },
+                                { days: 30, price: 1500 },
+                            ],
                 });
 
                 setStartDate(new Date().toISOString().split("T")[0]);
@@ -58,26 +62,28 @@ const ProductDetail = () => {
 
     const handleAddToCart = async () => {
         if (!selectedPlan) {
-            alert("Please select a rental plan");
+            toast.error("Please select a rental plan");
             return;
         }
 
         if (!startDate) {
-            alert("Please select a start date");
+            toast.error("Please select a start date");
             return;
         }
 
         try {
             await apiClient.post("/cart/items", {
                 product_id: product.id,
-                option_index: selectedOptionIndex, // send index to backend
+                option_index: selectedOptionIndex,
                 start_date: startDate,
             });
 
-            alert(`Added ${product.title} (${selectedPlan.days} days) to cart!`);
+            toast.success(`Added ${product.title} (${selectedPlan.days} days) to cart!`);
+
+            await fetchCartCount(); // ✅ Refresh cart count in navbar
         } catch (error) {
             console.error("Error adding to cart:", error);
-            alert("Failed to add item to cart. Please try again.");
+            toast.error("Failed to add item to cart. Please try again.");
         }
     };
 
@@ -89,8 +95,11 @@ const ProductDetail = () => {
         return end.toISOString().split("T")[0];
     };
 
-    if (loading) return <div className="text-center py-20 text-gray-500">Loading product...</div>;
-    if (!product) return <div className="text-center py-20 text-red-500">Product not found.</div>;
+    if (loading)
+        return <div className="text-center py-20 text-gray-500">Loading product...</div>;
+
+    if (!product)
+        return <div className="text-center py-20 text-red-500">Product not found.</div>;
 
     return (
         <div className="bg-gradient-to-r from-yellow-50 via-pink-50 to-purple-50 py-10 px-4">
@@ -106,26 +115,34 @@ const ProductDetail = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2">
                     {/* Product Image */}
                     <div className="relative">
-                        <img src={product.imageUrl} alt={product.title} className="w-full h-96 object-cover" />
+                        <img
+                            src={product.imageUrl}
+                            alt={product.title}
+                            className="w-full h-96 object-cover"
+                        />
                         {product.discountPercentage > 0 && (
                             <span className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-lg text-sm font-bold shadow-md">
-                {product.discountPercentage}% OFF
-              </span>
+                                {product.discountPercentage}% OFF
+                            </span>
                         )}
                     </div>
 
                     {/* Product Info */}
                     <div className="p-6 flex flex-col justify-between">
                         <div>
-                            <h1 className="text-3xl font-extrabold text-purple-700 mb-2">{product.title}</h1>
+                            <h1 className="text-3xl font-extrabold text-purple-700 mb-2">
+                                {product.title}
+                            </h1>
                             <p className="text-gray-600 mb-4">{product.description}</p>
 
                             <div className="flex items-center space-x-3 mb-4">
-                <span className="text-2xl font-bold text-pink-600">
-                  ₹{product.discountedPrice || product.originalPrice}
-                </span>
+                                <span className="text-2xl font-bold text-pink-600">
+                                    ₹{product.discountedPrice || product.originalPrice}
+                                </span>
                                 {product.discountedPrice && (
-                                    <span className="text-gray-400 line-through">₹{product.originalPrice}</span>
+                                    <span className="text-gray-400 line-through">
+                                        ₹{product.originalPrice}
+                                    </span>
                                 )}
                             </div>
 
@@ -145,7 +162,9 @@ const ProductDetail = () => {
 
                             {/* Rental Plans */}
                             <div className="space-y-2 mb-4">
-                                <h2 className="text-lg font-semibold text-purple-600 mb-1">Rental Plans</h2>
+                                <h2 className="text-lg font-semibold text-purple-600 mb-1">
+                                    Rental Plans
+                                </h2>
                                 <div className="flex flex-wrap gap-3">
                                     {product.plans.map((plan, idx) => (
                                         <button
@@ -166,11 +185,20 @@ const ProductDetail = () => {
                             {/* Selected Plan Summary */}
                             {selectedPlan && startDate && (
                                 <div className="bg-purple-50 p-4 rounded-lg mb-4">
-                                    <h3 className="font-semibold text-purple-700 mb-2">Rental Summary</h3>
+                                    <h3 className="font-semibold text-purple-700 mb-2">
+                                        Rental Summary
+                                    </h3>
                                     <p className="text-sm text-gray-600">
-                                        <strong>Plan:</strong> {selectedPlan.days} days<br />
-                                        <strong>Start Date:</strong> {new Date(startDate).toLocaleDateString()}<br />
-                                        <strong>End Date:</strong> {new Date(calculateEndDate()).toLocaleDateString()}<br />
+                                        <strong>Plan:</strong> {selectedPlan.days} days
+                                        <br />
+                                        <strong>Start Date:</strong>{" "}
+                                        {new Date(startDate).toLocaleDateString("en-GB")}
+                                        <br />
+                                        <strong>End Date:</strong>{" "}
+                                        {new Date(calculateEndDate()).toLocaleDateString(
+                                            "en-GB"
+                                        )}
+                                        <br />
                                         <strong>Total Price:</strong> ₹{selectedPlan.price}
                                     </p>
                                 </div>
