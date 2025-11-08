@@ -3,6 +3,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../apiClient";
 import toast from "react-hot-toast";
+import { useContext } from "react";
+import { CartContext } from "../context/CartContext";
 
 const Cart = () => {
     const [cartItems, setCartItems] = useState([]);
@@ -12,6 +14,8 @@ const Cart = () => {
     const [showPromoMessage, setShowPromoMessage] = useState(false);
     const [promoMessage, setPromoMessage] = useState("");
     const navigate = useNavigate();
+    const [itemLoading, setItemLoading] = useState(null);
+    const { fetchCartCount } = useContext(CartContext);
 
     // Fetch cart data from API
     // In your Cart component, update the fetchCartData function:
@@ -29,17 +33,29 @@ const Cart = () => {
 
             // Transform API response to match component structure
             // In your fetchCartData function, update the transformation:
-            const transformedItems = cartData.items.map(item => ({
-                id: item.id,
-                title: item.title,
-                rentalDays: item.duration_days,
-                price: item.price_inr,
-                quantity: 1,
-                imageUrl: item.image_url || `https://picsum.photos/200?${item.product_id}`,
-                productId: item.product_id,
-                startDate: item.start_date,
-                endDate: item.end_date
-            }));
+            const transformedItems = Object.values(
+                cartData.items.reduce((acc, item) => {
+                    const key = `${item.product_id}-${item.duration_days}-${item.start_date}`;
+                    if (!acc[key]) {
+                        acc[key] = {
+                            id: item.id, // first item’s id
+                            title: item.title,
+                            rentalDays: item.duration_days,
+                            price: item.price_inr,
+                            quantity: 1,
+                            imageUrl: item.image_url || `https://picsum.photos/200?${item.product_id}`,
+                            productId: item.product_id,
+                            startDate: item.start_date,
+                            endDate: item.end_date,
+                            ids: [item.id], // store all related cart item ids
+                        };
+                    } else {
+                        acc[key].quantity += 1;
+                        acc[key].ids.push(item.id);
+                    }
+                    return acc;
+                }, {})
+            );
 
             setCartItems(transformedItems);
         } catch (error) {
@@ -56,46 +72,73 @@ const Cart = () => {
     }, []);
 
     const incrementQty = async (id) => {
-        // For rental items, we typically don't increment quantity
-        // Instead, we add the same item again with same configuration
         try {
+            setItemLoading(id);
             const item = cartItems.find(item => item.id === id);
             if (item) {
-                // Add duplicate item with same configuration
                 await apiClient.post("/cart/items", {
                     product_id: item.productId,
                     option_index: await findOptionIndex(item.productId, item.rentalDays),
                     start_date: item.startDate
                 });
-                await fetchCartData(); // Refresh cart
+                await fetchCartData();
+                await fetchCartCount();
             }
         } catch (error) {
             console.error("Error adding item:", error);
-            alert("Failed to add item");
+            toast.error("Failed to add item");
+        } finally {
+            setItemLoading(null);
         }
     };
+
 
     const decrementQty = async (id) => {
-        // For rental items, we remove one instance
         try {
-            await removeItem(id);
+            setItemLoading(id);
+            const item = cartItems.find(item => item.id === id);
+            if (!item) return;
+
+            if (item.quantity > 1) {
+                const removeId = item.ids[item.ids.length - 1];
+                await removeItem(removeId);
+            } else {
+                await removeItem(item.id);
+            }
+
+            await fetchCartCount(); // ✅ Update cart count
         } catch (error) {
             console.error("Error removing item:", error);
+            toast.error("Failed to remove item");
+        } finally {
+            setItemLoading(null);
         }
     };
 
-    const removeItem = async (id) => {
+
+
+    const removeItem = async (id, removeAll = false) => {
         try {
-            await apiClient.delete(`/cart/items/${id}`);
-            // Update local state immediately for better UX
-            setCartItems(prev => prev.filter(item => item.id !== id));
-        } catch (error) {
-            console.error("Error removing item:", error);
-            alert("Failed to remove item from cart");
-            // Refresh cart to sync with server
+            // Find the grouped item that includes this id
+            const item = cartItems.find(i => i.id === id || i.ids?.includes(id));
+            if (!item) return;
+
+            // Determine which IDs to remove (all or just one)
+            const idsToRemove = removeAll ? item.ids : [id];
+
+            // Delete all selected cart items
+            for (const removeId of idsToRemove) {
+                await apiClient.delete(`/cart/items/${removeId}`);
+            }
+
             await fetchCartData();
+            await fetchCartCount();
+        } catch (error) {
+            console.error("Error removing item(s):", error);
+            alert("Failed to remove item(s) from cart");
         }
     };
+
 
     // Helper function to find option index based on product and rental days
     const findOptionIndex = async (productId, rentalDays) => {
@@ -176,7 +219,7 @@ const Cart = () => {
 
     if (loading) {
         return (
-            <div className="bg-gradient-to-r from-yellow-50 via-pink-50 to-purple-50 min-h-screen py-10">
+            <div className="bg-gradient-to-r from-yellow-50 via-pink-50 to-purple-50 min-h-screen py-10 d-flex items-center">
                 <div className="container mx-auto px-4">
                     <div className="text-center py-20">
                         <div className="text-6xl mb-4">🛒</div>
@@ -242,7 +285,7 @@ const Cart = () => {
                                                 </p>
                                             </div>
                                             <button
-                                                onClick={() => removeItem(item.id)}
+                                                onClick={() => removeItem(item.id, true)}
                                                 className="text-red-500 hover:text-red-700 transition-colors"
                                                 aria-label={`Remove ${item.title}`}
                                             >
@@ -261,22 +304,46 @@ const Cart = () => {
                                             <div className="flex items-center">
                                                 <button
                                                     onClick={() => decrementQty(item.id)}
-                                                    className="px-3 py-1 bg-gray-200 rounded-l-lg hover:bg-gray-300 transition disabled:opacity-50"
+                                                    disabled={itemLoading === item.id}
+                                                    className={`px-3 py-1 rounded-l-lg transition ${
+                                                        itemLoading === item.id
+                                                            ? "bg-gray-300 cursor-not-allowed"
+                                                            : "bg-gray-200 hover:bg-gray-300"
+                                                    }`}
                                                     aria-label="Remove one"
-                                                    title="Remove this rental item"
                                                 >
-                                                    -
+                                                    {itemLoading === item.id ? (
+                                                        <svg className="animate-spin h-4 w-4 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path>
+                                                        </svg>
+                                                    ) : (
+                                                        "-"
+                                                    )}
                                                 </button>
+
                                                 <span className="px-4 py-1 bg-gray-100 border-t border-b text-gray-800 min-w-[3rem] text-center">
-                                                    {item.quantity}
-                                                </span>
+            {item.quantity}
+        </span>
+
                                                 <button
                                                     onClick={() => incrementQty(item.id)}
-                                                    className="px-3 py-1 bg-gray-200 rounded-r-lg hover:bg-gray-300 transition"
+                                                    disabled={itemLoading === item.id}
+                                                    className={`px-3 py-1 rounded-r-lg transition ${
+                                                        itemLoading === item.id
+                                                            ? "bg-gray-300 cursor-not-allowed"
+                                                            : "bg-gray-200 hover:bg-gray-300"
+                                                    }`}
                                                     aria-label="Add another"
-                                                    title="Add another rental with same configuration"
                                                 >
-                                                    +
+                                                    {itemLoading === item.id ? (
+                                                        <svg className="animate-spin h-4 w-4 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path>
+                                                        </svg>
+                                                    ) : (
+                                                        "+"
+                                                    )}
                                                 </button>
                                             </div>
 
@@ -290,7 +357,7 @@ const Cart = () => {
                         </div>
 
                         {/* Cart Summary */}
-                        <div className="bg-white rounded-2xl shadow-md p-6 border border-pink-200 h-fit sticky top-6">
+                        <div className="bg-white rounded-2xl shadow-md p-6 border border-pink-200 h-fit sticky top-28">
                             <h2 className="text-xl font-bold text-purple-700 mb-4">
                                 Order Summary
                             </h2>
